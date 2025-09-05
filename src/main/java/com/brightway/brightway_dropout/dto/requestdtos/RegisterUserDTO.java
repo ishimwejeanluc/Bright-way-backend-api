@@ -7,6 +7,7 @@ import lombok.Getter;
 import lombok.Setter;
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
 
 import com.brightway.brightway_dropout.enumeration.EUserRole;
@@ -29,7 +30,9 @@ public class RegisterUserDTO {
     @Size(min = 8, message = "Password must be at least 8 characters")
     private String password;
 
+    @NotBlank(message = "phone number is required")
     private String phone;
 
+    @NotNull(message = "role is needed")
     private EUserRole role;
 }

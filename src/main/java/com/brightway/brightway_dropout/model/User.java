@@ -7,6 +7,7 @@ import lombok.Getter;
 import lombok.Setter;
 
 @Getter
+@Table(name = "users")
 @Setter
 @Entity
 public class User extends AbstractBaseUtility {

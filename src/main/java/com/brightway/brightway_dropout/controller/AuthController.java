@@ -1,7 +1,9 @@
 package com.brightway.brightway_dropout.controller;
 
+import com.brightway.brightway_dropout.dto.requestdtos.RegisterUserDTO;
 import com.brightway.brightway_dropout.dto.requestdtos.SignInDTO;
 import com.brightway.brightway_dropout.dto.responsedtos.LoginResponseDTO;
+import com.brightway.brightway_dropout.dto.responsedtos.RegisterUserResponseDTO;
 import com.brightway.brightway_dropout.service.AuthServiceImpl;
 import com.brightway.brightway_dropout.util.ApiResponse;
 import lombok.RequiredArgsConstructor;
@@ -21,18 +23,25 @@ public class AuthController {
     private final AuthServiceImpl authService;
 
 
-    @PostMapping(value = "/",consumes = MediaType.APPLICATION_JSON_VALUE,produces = MediaType.APPLICATION_JSON_VALUE)
+    @PostMapping(value = "/login",consumes = MediaType.APPLICATION_JSON_VALUE,produces = MediaType.APPLICATION_JSON_VALUE)
     public ResponseEntity<ApiResponse> login(@RequestBody @Valid  SignInDTO dto) {
-        LoginResponseDTO dtoresponse = authService.signIn(dto);
-        return  new ResponseEntity<>(new ApiResponse(
+        LoginResponseDTO loginResponseDTO = authService.signIn(dto);
+        return new ResponseEntity<>(new ApiResponse(
                 true,
                 "Login successfully",
-                dtoresponse
+                loginResponseDTO
         ), HttpStatus.OK);
-
     }
 
-
+    @PostMapping(value = "/register", consumes = MediaType.APPLICATION_JSON_VALUE, produces = MediaType.APPLICATION_JSON_VALUE)
+    public ResponseEntity<ApiResponse> register(@RequestBody @Valid RegisterUserDTO dto) {
+        RegisterUserResponseDTO registerUserResponseDTO = authService.registerUser(dto);
+        return new ResponseEntity<>(new ApiResponse(
+                true,
+                "Registration successful",
+                registerUserResponseDTO
+        ), HttpStatus.CREATED);
+    }
 
 
 }

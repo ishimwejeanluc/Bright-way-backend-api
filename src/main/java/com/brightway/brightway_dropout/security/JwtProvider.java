@@ -4,17 +4,18 @@ import com.brightway.brightway_dropout.model.User;
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.SignatureAlgorithm;
 import io.jsonwebtoken.security.Keys;
+import org.springframework.stereotype.Component;
 
 import javax.crypto.SecretKey;
 import java.util.Date;
 import java.util.Map;
 
-
+@Component
 public class JwtProvider {
-    private static final SecretKey SECRET_KEY = Keys.secretKeyFor(SignatureAlgorithm.HS256);
+    private final SecretKey SECRET_KEY = Keys.secretKeyFor(SignatureAlgorithm.HS256);
     private static final long EXPIRATION_TIME = 86400000; // 1 day in ms
 
-    public static String generateToken(User user) {
+    public String generateToken(User user) {
         Map<String, Object> claims = Map.of(
                 "userId", user.getId() ,
                 "email", user.getEmail() ,

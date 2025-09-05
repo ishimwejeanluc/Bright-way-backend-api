@@ -1,12 +1,10 @@
 package com.brightway.brightway_dropout.model;
 
-import com.brightway.brightway_dropout.util.AbstractAuditUtility;
 import com.brightway.brightway_dropout.util.AbstractBaseUtility;
 import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.Setter;
 
-import java.time.LocalDate;
 import java.util.List;
 
 @Getter
