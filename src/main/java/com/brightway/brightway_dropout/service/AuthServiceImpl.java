@@ -29,19 +29,25 @@ public class AuthServiceImpl implements IAuthService {
     @Transactional(readOnly = true)
     public LoginResponseDTO signIn(SignInDTO signInDTO) {
         try {
+
             User found = authRepository.findByEmail(signInDTO.getEmail())
                     .orElseThrow(() -> new UserNotFoundException("User with email " + signInDTO.getEmail() + " not found"));
 
             if (!passwordEncoder.matches(signInDTO.getPassword(), found.getPassword())) {
+
                 throw new InvalidCredentialsException("Invalid password");
             }
 
             String generatedToken = jwtProvider.generateToken(found);
+
             return new LoginResponseDTO(generatedToken);
+            
         } catch (UserNotFoundException | InvalidCredentialsException e) {
+
             throw e;
         } catch (Exception e) {
-            throw new RuntimeException("Internal server error occurred during sign in", e);
+
+            throw new RuntimeException("Internal server error occurred during sign in", e.getCause());
         }
     }
 

@@ -9,13 +9,12 @@ import lombok.Setter;
 import org.hibernate.annotations.GenericGenerator;
 
 import java.util.UUID;
-import java.time.LocalDateTime;
 
 @Getter
 @Setter
 @MappedSuperclass
 public abstract class AbstractBaseUtility extends AbstractAuditUtility {
-    @Id
+	@Id
     @GeneratedValue(generator = "UUID")
     @GenericGenerator(
             name = "UUID",

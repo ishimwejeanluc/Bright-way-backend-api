@@ -1,9 +1,11 @@
 package com.brightway.brightway_dropout.config;
 
+import com.brightway.brightway_dropout.security.JwtAuthenticationFilter;
 import com.brightway.brightway_dropout.security.SHA256PasswordEncoder;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.servlet.ServletOutputStream;
 import jakarta.servlet.http.HttpServletResponse;
+import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.HttpStatus;
@@ -16,6 +18,7 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.AuthenticationEntryPoint;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.access.AccessDeniedHandler;
+import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
@@ -25,7 +28,10 @@ import java.util.Map;
 @Configuration
 @EnableWebSecurity
 @EnableMethodSecurity
+@RequiredArgsConstructor
 public class SecurityConfig {
+    
+    private final JwtAuthenticationFilter jwtAuthenticationFilter;
 
     private static final String[] AUTH_WHITELIST = {
             "/swagger-resources/**",
@@ -91,13 +97,15 @@ public class SecurityConfig {
                 .requestMatchers(AUTH_WHITELIST).permitAll()
                 .anyRequest().authenticated()
             )
+            .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class)
             .exceptionHandling(exceptions -> exceptions
                 .authenticationEntryPoint(authenticationErrorHandler())
                 .accessDeniedHandler(accessDeniedHandler())
             )
             .formLogin(form -> form.disable())
             .httpBasic(basic -> basic.disable())
-            .headers(headers -> headers.frameOptions().disable()); // For H2 console if needed
+            .headers(headers -> headers
+                .frameOptions(frame -> frame.sameOrigin())); // Updated for H2 console compatibility
 
         return http.build();
     }

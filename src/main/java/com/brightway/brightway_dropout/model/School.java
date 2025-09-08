@@ -1,6 +1,7 @@
 package com.brightway.brightway_dropout.model;
 
 
+import com.brightway.brightway_dropout.enumeration.ESchoolType;
 import com.brightway.brightway_dropout.util.AbstractBaseUtility;
 import jakarta.persistence.*;
 import lombok.Getter;
@@ -15,7 +16,9 @@ public class School extends AbstractBaseUtility {
     private String name;
     private String region;
     private String address;
-    private String type;
+    
+    @Enumerated(EnumType.STRING)
+    private ESchoolType type;
 
     @OneToMany(mappedBy = "school")
     private List<Student> students;
