@@ -1,12 +1,12 @@
 package com.brightway.brightway_dropout.service;
 
-import com.brightway.brightway_dropout.dto.requestdtos.RegisterUserDTO;
-import com.brightway.brightway_dropout.dto.requestdtos.SignInDTO;
-import com.brightway.brightway_dropout.dto.responsedtos.LoginResponseDTO;
-import com.brightway.brightway_dropout.dto.responsedtos.RegisterUserResponseDTO;
+import com.brightway.brightway_dropout.dto.user.request.RegisterUserDTO;
+import com.brightway.brightway_dropout.dto.user.request.SignInDTO;
+import com.brightway.brightway_dropout.dto.user.response.LoginResponseDTO;
+import com.brightway.brightway_dropout.dto.user.response.RegisterUserResponseDTO;
 import com.brightway.brightway_dropout.exception.InvalidCredentialsException;
-import com.brightway.brightway_dropout.exception.UserAlreadyExistsException;
-import com.brightway.brightway_dropout.exception.UserNotFoundException;
+import com.brightway.brightway_dropout.exception.ResourceAlreadyExistsException;
+import com.brightway.brightway_dropout.exception.ResourceNotFoundException;
 import com.brightway.brightway_dropout.model.User;
 import com.brightway.brightway_dropout.repository.IAuthRepository;
 import com.brightway.brightway_dropout.security.JwtProvider;
@@ -31,7 +31,7 @@ public class AuthServiceImpl implements IAuthService {
         try {
 
             User found = authRepository.findByEmail(signInDTO.getEmail())
-                    .orElseThrow(() -> new UserNotFoundException("User with email " + signInDTO.getEmail() + " not found"));
+                    .orElseThrow(() -> new ResourceNotFoundException("User with email " + signInDTO.getEmail() + " not found"));
 
             if (!passwordEncoder.matches(signInDTO.getPassword(), found.getPassword())) {
 
@@ -42,7 +42,7 @@ public class AuthServiceImpl implements IAuthService {
 
             return new LoginResponseDTO(generatedToken);
             
-        } catch (UserNotFoundException | InvalidCredentialsException e) {
+        } catch (ResourceNotFoundException | InvalidCredentialsException e) {
 
             throw e;
         } catch (Exception e) {
@@ -58,7 +58,7 @@ public class AuthServiceImpl implements IAuthService {
             // Check if user already exists
             Optional<User> existingUser = authRepository.findByEmail(registerUserDTO.getEmail());
             if (existingUser.isPresent()) {
-                throw new UserAlreadyExistsException("User with email " + registerUserDTO.getEmail() + " already exists");
+                throw new ResourceAlreadyExistsException("User with email " + registerUserDTO.getEmail() + " already exists");
             }
 
             // Create new user
@@ -77,7 +77,7 @@ public class AuthServiceImpl implements IAuthService {
                 savedUser.getId(),
                 savedUser.getRole()
             );
-        } catch (UserAlreadyExistsException e) {
+        } catch (ResourceAlreadyExistsException e) {
             throw e;
         } catch (Exception e) {
             throw new RuntimeException("Internal server error occurred during user registration", e);

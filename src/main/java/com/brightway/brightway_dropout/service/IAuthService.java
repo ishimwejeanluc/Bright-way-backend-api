@@ -1,9 +1,9 @@
 package com.brightway.brightway_dropout.service;
 
-import com.brightway.brightway_dropout.dto.requestdtos.RegisterUserDTO;
-import com.brightway.brightway_dropout.dto.requestdtos.SignInDTO;
-import com.brightway.brightway_dropout.dto.responsedtos.LoginResponseDTO;
-import com.brightway.brightway_dropout.dto.responsedtos.RegisterUserResponseDTO;
+import com.brightway.brightway_dropout.dto.user.request.RegisterUserDTO;
+import com.brightway.brightway_dropout.dto.user.request.SignInDTO;
+import com.brightway.brightway_dropout.dto.user.response.LoginResponseDTO;
+import com.brightway.brightway_dropout.dto.user.response.RegisterUserResponseDTO;
 
 public interface IAuthService {
 

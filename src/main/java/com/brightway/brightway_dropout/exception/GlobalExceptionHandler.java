@@ -28,53 +28,21 @@ public class GlobalExceptionHandler {
         );
     }
 
-    @ExceptionHandler(UserAlreadyExistsException.class)
-    public ResponseEntity<ErrorResponse> handleUserAlreadyExists(UserAlreadyExistsException ex) {
-        return new ResponseEntity<>(
-                new ErrorResponse(HttpStatus.CONFLICT.value(), "Conflict", ex.getMessage()),
-                HttpStatus.CONFLICT
-        );
-    }
+        @ExceptionHandler(ResourceNotFoundException.class)
+        public ResponseEntity<ErrorResponse> handleResourceNotFound(ResourceNotFoundException ex) {
+                return new ResponseEntity<>(
+                                new ErrorResponse(HttpStatus.NOT_FOUND.value(), "Not Found", ex.getMessage()),
+                                HttpStatus.NOT_FOUND
+                );
+        }
 
-    @ExceptionHandler(SchoolAlreadyExistsException.class)
-    public ResponseEntity<ErrorResponse> handleSchoolAlreadyExists(SchoolAlreadyExistsException ex) {
-        return new ResponseEntity<>(
-                new ErrorResponse(HttpStatus.CONFLICT.value(), "Conflict", ex.getMessage()),
-                HttpStatus.CONFLICT
-        );
-    }
-
-    @ExceptionHandler(UserNotFoundException.class)
-    public ResponseEntity<ErrorResponse> handleUserNotFound(UserNotFoundException ex) {
-        return new ResponseEntity<>(
-                new ErrorResponse(HttpStatus.NOT_FOUND.value(), "Not Found", ex.getMessage()),
-                HttpStatus.NOT_FOUND
-        );
-    }
-
-    @ExceptionHandler(SchoolNotFoundException.class)
-    public ResponseEntity<ErrorResponse> handleSchoolNotFound(SchoolNotFoundException ex) {
-        return new ResponseEntity<>(
-                new ErrorResponse(HttpStatus.NOT_FOUND.value(), "Not Found", ex.getMessage()),
-                HttpStatus.NOT_FOUND
-        );
-    }
-
-    @ExceptionHandler(TeacherNotFoundException.class)
-    public ResponseEntity<ErrorResponse> handleTeacherNotFound(TeacherNotFoundException ex) {
-        return new ResponseEntity<>(
-                new ErrorResponse(HttpStatus.NOT_FOUND.value(), "Not Found", ex.getMessage()),
-                HttpStatus.NOT_FOUND
-        );
-    }
-
-    @ExceptionHandler(CourseNotFoundException.class)
-    public ResponseEntity<ErrorResponse> handleCourseNotFound(CourseNotFoundException ex) {
-        return new ResponseEntity<>(
-                new ErrorResponse(HttpStatus.NOT_FOUND.value(), "Not Found", ex.getMessage()),
-                HttpStatus.NOT_FOUND
-        );
-    }
+        @ExceptionHandler(ResourceAlreadyExistsException.class)
+        public ResponseEntity<ErrorResponse> handleResourceAlreadyExists(ResourceAlreadyExistsException ex) {
+                return new ResponseEntity<>(
+                                new ErrorResponse(HttpStatus.CONFLICT.value(), "Conflict", ex.getMessage()),
+                                HttpStatus.CONFLICT
+                );
+        }
 
     @ExceptionHandler(InvalidCredentialsException.class)
     public ResponseEntity<ErrorResponse> handleInvalidCredentials(InvalidCredentialsException ex) {

@@ -4,5 +4,6 @@ public enum EUserRole {
     ADMIN,
     STUDENT,
     TEACHER,
+    PRINCIPAL,
     PARENT
 }

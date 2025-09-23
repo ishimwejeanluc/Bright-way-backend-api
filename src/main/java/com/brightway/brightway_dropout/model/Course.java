@@ -20,8 +20,15 @@ public class Course extends AbstractBaseUtility {
     @JoinColumn(name = "teacher_id")
     private Teacher teacher;
 
+    private int credits;
+    private String grade;
+
     @OneToMany(mappedBy = "course")
     private List<Enrollment> enrollments;
+
+    @ManyToOne
+    @JoinColumn(name = "school_id")
+    private School school;
 
 
 }

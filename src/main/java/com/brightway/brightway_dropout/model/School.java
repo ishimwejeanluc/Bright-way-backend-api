@@ -26,5 +26,11 @@ public class School extends AbstractBaseUtility {
     @OneToMany(mappedBy = "school")
     private List<Teacher> teachers;
 
+    @OneToOne
+    @JoinColumn(name = "principal", referencedColumnName = "id")
+    private User principal;
 
-}
+    @OneToMany(mappedBy = "school")
+    private List<Course> courses;
+
+ }

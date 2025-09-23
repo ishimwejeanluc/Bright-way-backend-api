@@ -5,6 +5,7 @@ import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.Setter;
 
+import java.util.Date;
 import java.util.List;
 
 @Getter
@@ -20,6 +21,8 @@ public class Teacher extends AbstractBaseUtility {
     private School school;
 
     private String specialization;
+
+    private Date dateOfBirth ;
 
     @OneToMany(mappedBy = "teacher")
     private List<Course> courses;

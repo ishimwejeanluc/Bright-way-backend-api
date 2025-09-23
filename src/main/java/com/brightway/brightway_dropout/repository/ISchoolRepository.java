@@ -10,4 +10,6 @@ import java.util.UUID;
 @Repository
 public interface ISchoolRepository extends JpaRepository<School, UUID> {
     Optional<School> findByName(String name);
+
+    Optional<School> findByPrincipal_Id(UUID principalId);
 }

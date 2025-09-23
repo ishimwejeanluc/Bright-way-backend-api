@@ -1,9 +1,9 @@
 package com.brightway.brightway_dropout.controller;
 
-import com.brightway.brightway_dropout.dto.requestdtos.CreateSchoolDTO;
-import com.brightway.brightway_dropout.dto.responsedtos.CreateSchoolResponseDTO;
-import com.brightway.brightway_dropout.dto.responsedtos.DeleteResponseDTO;
-import com.brightway.brightway_dropout.dto.responsedtos.SchoolResponseDTO;
+import com.brightway.brightway_dropout.dto.school.request.CreateSchoolDTO;
+import com.brightway.brightway_dropout.dto.school.response.CreateSchoolResponseDTO;
+import com.brightway.brightway_dropout.dto.common.response.DeleteResponseDTO;
+import com.brightway.brightway_dropout.dto.school.response.SchoolResponseDTO;
 import com.brightway.brightway_dropout.service.SchoolServiceImpl;
 import com.brightway.brightway_dropout.util.ApiResponse;
 import jakarta.validation.Valid;
@@ -23,6 +23,19 @@ import java.util.UUID;
 public class SchoolController {
     private final SchoolServiceImpl schoolService;
 
+    @PutMapping(value = "/{id}", consumes = MediaType.APPLICATION_JSON_VALUE, produces = MediaType.APPLICATION_JSON_VALUE)
+    @PreAuthorize("hasRole('PRINCIPAL')")
+    public ResponseEntity<ApiResponse> updateSchool(@PathVariable UUID id, @Valid @RequestBody CreateSchoolDTO updateSchoolDTO) {
+    SchoolResponseDTO response = schoolService.updateSchool(id, updateSchoolDTO);
+    return new ResponseEntity<>(
+        new ApiResponse(true,
+            "School updated successfully",
+            response),
+        HttpStatus.OK
+    );
+    }
+    
+
     @PostMapping(value = "/create", consumes = MediaType.APPLICATION_JSON_VALUE, produces = MediaType.APPLICATION_JSON_VALUE)
     @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<ApiResponse> createSchool(@Valid @RequestBody CreateSchoolDTO createSchoolDTO) {
@@ -36,7 +49,7 @@ public class SchoolController {
     }
 
     @GetMapping(value = "/{id}", produces = MediaType.APPLICATION_JSON_VALUE)
-    @PreAuthorize("hasRole('ADMIN') or hasRole('TEACHER')")
+    @PreAuthorize("hasRole('PRINCIPAL') or hasRole('TEACHER')")
     public ResponseEntity<ApiResponse> getSchoolById(@PathVariable UUID id) {
         SchoolResponseDTO response = schoolService.getSchoolById(id);
         return new ResponseEntity<>(
@@ -48,7 +61,7 @@ public class SchoolController {
     }
 
     @GetMapping(produces = MediaType.APPLICATION_JSON_VALUE)
-    @PreAuthorize("hasRole('ADMIN') or hasRole('TEACHER')")
+    @PreAuthorize("hasRole('PRINCIPAL') or hasRole('TEACHER')")
     public ResponseEntity<ApiResponse> getAllSchools() {
         List<SchoolResponseDTO> response = schoolService.getAllSchools();
         return new ResponseEntity<>(
