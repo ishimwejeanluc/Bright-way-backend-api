@@ -27,7 +27,7 @@ public class CourseController {
     private final CourseServiceImpl courseService;
 
     @PostMapping(value = "/create", consumes = MediaType.APPLICATION_JSON_VALUE, produces = MediaType.APPLICATION_JSON_VALUE)
-    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize("hasRole('PRINCIPAL')")
     public ResponseEntity<ApiResponse> createCourse(@Valid @RequestBody CreateCourseDTO createCourseDTO) {
         CreateCourseResponseDTO response = courseService.createCourse(createCourseDTO);
         return new ResponseEntity<>(
@@ -37,7 +37,7 @@ public class CourseController {
     }
 
     @GetMapping(value = "/{id}", produces = MediaType.APPLICATION_JSON_VALUE)
-    @PreAuthorize("hasRole('ADMIN') or hasRole('TEACHER')")
+    @PreAuthorize("hasRole('PRINCIPAL') or hasRole('TEACHER')")
     public ResponseEntity<ApiResponse> getCourseById(@PathVariable UUID id) {
         CourseResponseDTO response = courseService.getCourseById(id);
         return new ResponseEntity<>(

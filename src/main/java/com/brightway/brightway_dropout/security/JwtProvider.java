@@ -36,7 +36,7 @@ public class JwtProvider {
 
         // Add schoolId and schoolName for principal role
         if (user.getRole() != null && user.getRole().toString().equalsIgnoreCase("PRINCIPAL")) {
-            schoolRepository.findByPrincipal_Id(user.getId())
+            schoolRepository.findByPrincipalId(user.getId())
                 .ifPresent(school -> {
                     claims.put("schoolId", school.getId());
                     claims.put("schoolName", school.getName());

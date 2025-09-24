@@ -49,7 +49,7 @@ public class SchoolServiceImpl implements ISchoolService {
             school.setAddress(updateSchoolDTO.getAddress());
             school.setType(updateSchoolDTO.getType());
 
-            Long currentUserId = jwtUtil.getCurrentUserId();
+            UUID currentUserId = jwtUtil.getCurrentUserId();
             if (currentUserId != null) {
                 school.setModifiedBy(currentUserId.toString());
             }
@@ -93,7 +93,7 @@ public class SchoolServiceImpl implements ISchoolService {
         newSchool.setType(createSchoolDTO.getType());
         newSchool.setPrincipal(principal);
 
-        Long currentUserId = jwtUtil.getCurrentUserId();
+        UUID currentUserId = jwtUtil.getCurrentUserId();
         if (currentUserId != null) {
             newSchool.setCreatedBy(currentUserId.toString());
             newSchool.setModifiedBy(currentUserId.toString());

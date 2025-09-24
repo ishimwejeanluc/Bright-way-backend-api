@@ -14,5 +14,5 @@ public interface ICourseService {
     List<CourseResponseDTO> getAllCourses();
     CourseResponseDTO updateCourse(UUID id, CreateCourseDTO updateDTO);
     DeleteResponseDTO deleteCourse(UUID id);
-    List<CourseStatsResponseDTO> getCourseStatsBySchool(UUID schoolId);
+    CourseStatsResponseDTO getCourseStatsBySchool(UUID schoolId);
 }

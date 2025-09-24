@@ -12,7 +12,9 @@ import java.util.UUID;
 
 import com.brightway.brightway_dropout.exception.ResourceNotFoundException;
 import com.brightway.brightway_dropout.model.Course;
+import com.brightway.brightway_dropout.model.School;
 import com.brightway.brightway_dropout.repository.ICourseRepository;
+import com.brightway.brightway_dropout.repository.ISchoolRepository;
 import com.brightway.brightway_dropout.util.JwtUtil;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -24,6 +26,7 @@ import org.springframework.transaction.annotation.Transactional;
 @Slf4j
 public class CourseServiceImpl implements ICourseService {
     private final ICourseRepository courseRepository;
+    private final ISchoolRepository schoolRepository;
     private final JwtUtil jwtUtil;
 
     @Override
@@ -32,10 +35,19 @@ public class CourseServiceImpl implements ICourseService {
         if (courseRepository.findByName(courseDTO.getName()).isPresent()) {
         throw new ResourceAlreadyExistsException("Course with name '" + courseDTO.getName() + "' already exists");
         }
+
         Course course = new Course();
         course.setName(courseDTO.getName());
         course.setDescription(courseDTO.getDescription());
-        Long currentUserId = jwtUtil.getCurrentUserId();
+        course.setGrade(courseDTO.getGrade());
+        course.setCredits(courseDTO.getCredits());
+        School school = new School();
+        if(!schoolRepository.findById(courseDTO.getSchoolId()).isPresent()) {
+            throw new ResourceNotFoundException("School with id '" + courseDTO.getSchoolId() + "' not found");
+        }
+        school.setId(courseDTO.getSchoolId());
+        course.setSchool(school);
+        UUID currentUserId = jwtUtil.getCurrentUserId();
         if (currentUserId != null) {
             course.setCreatedBy(currentUserId.toString());
             course.setModifiedBy(currentUserId.toString());

@@ -4,6 +4,7 @@ import com.brightway.brightway_dropout.dto.user.request.RegisterUserDTO;
 import com.brightway.brightway_dropout.dto.user.request.SignInDTO;
 import com.brightway.brightway_dropout.dto.user.response.LoginResponseDTO;
 import com.brightway.brightway_dropout.dto.user.response.RegisterUserResponseDTO;
+import com.brightway.brightway_dropout.enumeration.EUserRole;
 import com.brightway.brightway_dropout.exception.InvalidCredentialsException;
 import com.brightway.brightway_dropout.exception.ResourceAlreadyExistsException;
 import com.brightway.brightway_dropout.exception.ResourceNotFoundException;
@@ -67,15 +68,14 @@ public class AuthServiceImpl implements IAuthService {
             newUser.setEmail(registerUserDTO.getEmail());
             newUser.setPassword(passwordEncoder.encode(registerUserDTO.getPassword()));
             newUser.setPhone(registerUserDTO.getPhone());
-            newUser.setRole(registerUserDTO.getRole());
+            newUser.setRole(EUserRole.ADMIN);
 
             // Save user
             User savedUser = authRepository.save(newUser);
 
             // Return response DTO
             return new RegisterUserResponseDTO(
-                savedUser.getId(),
-                savedUser.getRole()
+                savedUser.getId()
             );
         } catch (ResourceAlreadyExistsException e) {
             throw e;

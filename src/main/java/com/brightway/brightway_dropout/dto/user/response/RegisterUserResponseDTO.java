@@ -10,6 +10,4 @@ import java.util.UUID;
 @NoArgsConstructor
 public class RegisterUserResponseDTO {
     private UUID id;
-    private String name;
-    private String email;
 }

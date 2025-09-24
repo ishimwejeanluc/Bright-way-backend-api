@@ -12,6 +12,7 @@ import org.springframework.web.context.request.ServletRequestAttributes;
 
 import javax.crypto.SecretKey;
 import java.nio.charset.StandardCharsets;
+import java.util.UUID;
 
 @Component
 @Slf4j
@@ -21,7 +22,7 @@ public class JwtUtil {
     private String jwtSecret;
 
     
-    public Long getCurrentUserId() {
+    public UUID getCurrentUserId() {
         try {
             HttpServletRequest request = getCurrentRequest();
             if (request == null) {
@@ -37,16 +38,21 @@ public class JwtUtil {
 
             Claims claims = parseToken(token);
             Object userIdClaim = claims.get("userId");
-            
-            if (userIdClaim instanceof Number) {
-                return ((Number) userIdClaim).longValue();
+
+            if (userIdClaim instanceof UUID) {
+                return (UUID) userIdClaim;
             } else if (userIdClaim instanceof String) {
-                return Long.parseLong((String) userIdClaim);
+                try {
+                    return UUID.fromString((String) userIdClaim);
+                } catch (IllegalArgumentException e) {
+                    log.error("Error parsing userId as UUID: {}", e.getMessage());
+                    return null;
+                }
             }
-            
+
             log.warn("UserId claim not found or invalid format in JWT token");
             return null;
-            
+
         } catch (Exception e) {
             log.error("Error extracting user ID from JWT token: {}", e.getMessage());
             return null;

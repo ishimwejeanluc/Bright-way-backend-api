@@ -13,4 +13,5 @@ public class RegisterUserDTO {
     @NotBlank(message = "Password is required")
     private String password;
     private String phone;
+
 }

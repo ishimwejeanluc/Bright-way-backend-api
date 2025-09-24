@@ -33,7 +33,13 @@ import java.util.stream.Collectors;
 @Service
 @RequiredArgsConstructor
 public class TeacherServiceImpl implements ITeacherService {
-    
+    private final ITeacherRepository teacherRepository;
+    private final IAuthRepository authRepository;
+    private final ISchoolRepository schoolRepository;
+    private final ICourseRepository courseRepository;
+    private final PasswordEncoder passwordEncoder;
+    private final JwtUtil jwtUtil;
+
     public TeacherStatsResponseDTO getTeacherStatsBySchool(UUID schoolId) {
         List<Teacher> teachers = teacherRepository.findAll().stream()
             .filter(t -> t.getSchool() != null && t.getSchool().getId().equals(schoolId))
@@ -80,9 +86,7 @@ public class TeacherServiceImpl implements ITeacherService {
 
         // Update courses
         if (updateTeacherDTO.getCourses() != null && !updateTeacherDTO.getCourses().isEmpty()) {
-            List<UUID> courseIds = updateTeacherDTO.getCourses().stream()
-                    .map(Course::getId)
-                    .collect(Collectors.toList());
+            List<UUID> courseIds = updateTeacherDTO.getCourses();
             List<Course> courses = courseRepository.findAllById(courseIds);
             courses.forEach(course -> course.setTeacher(teacher));
             courseRepository.saveAll(courses);
@@ -90,7 +94,7 @@ public class TeacherServiceImpl implements ITeacherService {
         }
 
         // Update audit field
-        Long currentUserId = jwtUtil.getCurrentUserId();
+        UUID currentUserId = jwtUtil.getCurrentUserId();
         if (currentUserId != null) {
             teacher.setModifiedBy(currentUserId.toString());
         }
@@ -98,12 +102,7 @@ public class TeacherServiceImpl implements ITeacherService {
         Teacher updatedTeacher = teacherRepository.save(teacher);
         return mapToTeacherResponseDTO(updatedTeacher);
     }
-    private final ITeacherRepository teacherRepository;
-    private final IAuthRepository authRepository;
-    private final ISchoolRepository schoolRepository;
-    private final ICourseRepository courseRepository;
-    private final PasswordEncoder passwordEncoder;
-    private final JwtUtil jwtUtil;
+   
 
     @Override
     @Transactional
@@ -127,7 +126,7 @@ public class TeacherServiceImpl implements ITeacherService {
         newUser.setRole(EUserRole.TEACHER);
         
         // Set audit fields for user
-        Long currentUserId = jwtUtil.getCurrentUserId();
+        UUID currentUserId = jwtUtil.getCurrentUserId();
         if (currentUserId != null) {
             newUser.setCreatedBy(currentUserId.toString());
             newUser.setModifiedBy(currentUserId.toString());
@@ -153,9 +152,7 @@ public class TeacherServiceImpl implements ITeacherService {
 
         // Update courses with the teacher ID (Step 2)
         if (createTeacherDTO.getCourses() != null && !createTeacherDTO.getCourses().isEmpty()) {
-            List<UUID> courseIds = createTeacherDTO.getCourses().stream()
-                    .map(Course::getId)
-                    .collect(Collectors.toList());
+            List<UUID> courseIds = createTeacherDTO.getCourses();
             // Get courses by IDs and assign teacher
             List<Course> courses = courseRepository.findAllById(courseIds);
             courses.forEach(course -> course.setTeacher(savedTeacher));
