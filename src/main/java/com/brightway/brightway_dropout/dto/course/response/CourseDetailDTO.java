@@ -10,6 +10,7 @@ import lombok.NoArgsConstructor;
 public class CourseDetailDTO {
     private String name;
     private String grade;
+    private int credits;
     private String teacherName;
     private boolean active;
     private int enrollmentCount;

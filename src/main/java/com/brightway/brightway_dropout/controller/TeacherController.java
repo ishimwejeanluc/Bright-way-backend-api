@@ -3,6 +3,7 @@ package com.brightway.brightway_dropout.controller;
 import com.brightway.brightway_dropout.dto.teacher.request.CreateTeacherDTO;
 import com.brightway.brightway_dropout.dto.teacher.response.CreateTeacherResponseDTO;
 import com.brightway.brightway_dropout.dto.common.response.DeleteResponseDTO;
+import com.brightway.brightway_dropout.dto.teacher.response.TeacherDetailDTO;
 import com.brightway.brightway_dropout.dto.teacher.response.TeacherResponseDTO;
 import com.brightway.brightway_dropout.dto.teacher.response.TeacherStatsResponseDTO;
 import com.brightway.brightway_dropout.service.TeacherServiceImpl;
@@ -39,7 +40,7 @@ public class TeacherController {
    
 
     @PostMapping(value = "/create", consumes = MediaType.APPLICATION_JSON_VALUE, produces = MediaType.APPLICATION_JSON_VALUE)
-    @PreAuthorize("hasRole('')")
+    @PreAuthorize("hasRole('PRINCIPAL')")
     public ResponseEntity<ApiResponse> createTeacher(@Valid @RequestBody CreateTeacherDTO createTeacherDTO) {
         CreateTeacherResponseDTO response = teacherService.createTeacher(createTeacherDTO);
         return new ResponseEntity<>(
@@ -53,7 +54,7 @@ public class TeacherController {
     @GetMapping(value = "/{id}", produces = MediaType.APPLICATION_JSON_VALUE)
     @PreAuthorize("hasRole('PRINCIPAL') or hasRole('TEACHER')")
     public ResponseEntity<ApiResponse> getTeacherById(@PathVariable UUID id) {
-        TeacherResponseDTO response = teacherService.getTeacherById(id);
+        TeacherDetailDTO response = teacherService.getTeacherById(id);
         return new ResponseEntity<>(
                 new ApiResponse(true,
                         "Teacher retrieved successfully",

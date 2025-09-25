@@ -1,4 +1,5 @@
 package com.brightway.brightway_dropout.service;
+import com.brightway.brightway_dropout.enumeration.EStudentStatus;
 import com.brightway.brightway_dropout.enumeration.EUserRole;
 import com.brightway.brightway_dropout.exception.ResourceAlreadyExistsException;
 import com.brightway.brightway_dropout.exception.ResourceNotFoundException;
@@ -42,7 +43,7 @@ public class StudentServiceImpl implements IStudentService {
 
     @Override
     public StudentStatsResponseDTO getStudentStatsBySchool(UUID schoolId) {
-        List<Student> students = studentRepository.findBySchoolId(schoolId);
+        List<Student> students = studentRepository.findAllBySchoolIdWithEnrollments(schoolId);
         int totalStudents = students.size();
         int totalCriticalRisk = (int) students.stream()
             .flatMap(s -> s.getDropoutPredictions() != null ? s.getDropoutPredictions().stream() : java.util.stream.Stream.empty())
@@ -152,7 +153,7 @@ public class StudentServiceImpl implements IStudentService {
         student.setDateOfBirth(java.time.LocalDate.parse(dto.getDateOfBirth()));
         student.setGender(dto.getGender() != null ? com.brightway.brightway_dropout.enumeration.EGender.valueOf(dto.getGender()) : null);
         student.setEnrollmentYear(dto.getEnrollmentYear());
-        student.setStatus(dto.getStatus() != null ? com.brightway.brightway_dropout.enumeration.EStudentStatus.valueOf(dto.getStatus()) : null);
+        student.setStatus(EStudentStatus.ACTIVE);
         if (currentUserId != null) {
             student.setCreatedBy(currentUserId.toString());
             student.setModifiedBy(currentUserId.toString());

@@ -23,6 +23,5 @@ public class CreateStudentWithParentRequestDTO {
     private String dateOfBirth;
     private String gender;
     private int enrollmentYear;
-    private String status;
     private UUID schoolId;
 }

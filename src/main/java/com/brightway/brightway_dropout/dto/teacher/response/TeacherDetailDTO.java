@@ -12,5 +12,5 @@ public class TeacherDetailDTO {
     private String name;
     private String specialization;
     private List<String> courses;
-    private String status;
+    private Boolean status;
 }

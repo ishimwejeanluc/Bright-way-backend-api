@@ -84,7 +84,7 @@ public class CourseServiceImpl implements ICourseService {
         courseRepository.findByName(updateDTO.getName())
                 .filter(existing -> !existing.getId().equals(id))
                 .ifPresent(existing -> {
-            throw new ResourceAlreadyExistsException("Course with name '" + updateDTO.getName() + "' already exists");
+                    throw new ResourceAlreadyExistsException("Course with name '" + updateDTO.getName() + "' already exists");
                 });
         course.setName(updateDTO.getName());
         course.setDescription(updateDTO.getDescription());
@@ -103,7 +103,7 @@ public class CourseServiceImpl implements ICourseService {
 
     @Override
     public CourseStatsResponseDTO getCourseStatsBySchool(UUID schoolId) {
-        List<Course> courses = courseRepository.findBySchoolId(schoolId);
+        List<Course> courses = courseRepository.findAllBySchoolIdWithDetails(schoolId);
         int totalCourses = courses.size();
         int totalActiveCourses = (int) courses.stream().filter(Course::isActive).count();
         int totalInactiveCourses = totalCourses - totalActiveCourses;
@@ -111,6 +111,7 @@ public class CourseServiceImpl implements ICourseService {
             .map(course -> new CourseDetailDTO(
                 course.getName(),
                 course.getGrade(),
+                course.getCredits(),
                 course.getTeacher() != null ? course.getTeacher().getUser().getName() : null,
                 course.isActive(),
                 course.getEnrollments() != null ? course.getEnrollments().size() : 0

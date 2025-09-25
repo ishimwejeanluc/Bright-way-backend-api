@@ -1,5 +1,6 @@
 package com.brightway.brightway_dropout.util;
 
+import jakarta.persistence.Column;
 import lombok.Getter;
 import lombok.Setter;
 import lombok.ToString;
@@ -15,11 +16,15 @@ import java.time.LocalDateTime;
 @ToString
 public abstract class AbstractAuditUtility {
     @CreationTimestamp
+    @Column(name = "created_at", updatable = false)
     private LocalDateTime createdAt;
     @LastModifiedDate
+    @Column(name = "updated_at")
     private LocalDateTime updatedAt;
     @CreatedBy
+    @Column(name = "created_by", updatable =false)
     private String createdBy;
     @LastModifiedBy
+    @Column(name = "modified_by")
     private String modifiedBy;
 }

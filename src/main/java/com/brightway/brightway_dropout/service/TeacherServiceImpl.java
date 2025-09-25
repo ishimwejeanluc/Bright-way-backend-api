@@ -41,17 +41,15 @@ public class TeacherServiceImpl implements ITeacherService {
     private final JwtUtil jwtUtil;
 
     public TeacherStatsResponseDTO getTeacherStatsBySchool(UUID schoolId) {
-        List<Teacher> teachers = teacherRepository.findAll().stream()
-            .filter(t -> t.getSchool() != null && t.getSchool().getId().equals(schoolId))
-            .toList();
+        List<Teacher> teachers = teacherRepository.findAllBySchoolIdWithCourses(schoolId);
 
         List<TeacherDetailDTO> teacherDetails = teachers.stream().map(t -> {
             String name = t.getUser() != null ? t.getUser().getName() : null;
             String specialization = t.getSpecialization();
             List<String> courses = t.getCourses() != null ?
                 t.getCourses().stream().map(c -> c.getName()).toList() : List.of();
-            String status = t.getUser() != null && t.getUser().getRole() != null ? t.getUser().getRole().name() : null;
-            return new TeacherDetailDTO(name, specialization, courses, status);
+
+            return new TeacherDetailDTO(name, specialization, courses, t.isActive());
         }).toList();
 
         return new TeacherStatsResponseDTO(teachers.size(), teacherDetails);
@@ -167,12 +165,6 @@ public class TeacherServiceImpl implements ITeacherService {
         );
     }
 
-    @Override
-    public TeacherResponseDTO getTeacherById(UUID id) {
-        Teacher teacher = teacherRepository.findById(id)
-                .orElseThrow(() -> new ResourceNotFoundException("Teacher with ID " + id + " not found"));
-        return mapToTeacherResponseDTO(teacher);
-    }
 
     @Override
     public List<TeacherResponseDTO> getAllTeachers() {
@@ -199,6 +191,21 @@ public class TeacherServiceImpl implements ITeacherService {
             authRepository.delete(user);
         }
         return new DeleteResponseDTO("Teacher deleted successfully");
+    }
+
+    @Override
+    public TeacherDetailDTO getTeacherById(UUID id) {
+        Teacher teacher = teacherRepository.findByIdWithCourses(id)
+            .orElseThrow(() -> new ResourceNotFoundException("Teacher with ID " + id + " not found"));
+
+        String name = teacher.getUser() != null ? teacher.getUser().getName() : null;
+        String specialization = teacher.getSpecialization();
+        List<String> courses = teacher.getCourses() != null
+            ? teacher.getCourses().stream().map(Course::getName).toList()
+            : List.of();
+
+
+        return new TeacherDetailDTO(name, specialization, courses, teacher.isActive());
     }
 
     private TeacherResponseDTO mapToTeacherResponseDTO(Teacher teacher) {
