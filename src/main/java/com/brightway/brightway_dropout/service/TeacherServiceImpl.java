@@ -1,18 +1,20 @@
 package com.brightway.brightway_dropout.service;
 
 import com.brightway.brightway_dropout.dto.teacher.request.CreateTeacherDTO;
-import com.brightway.brightway_dropout.dto.teacher.response.CreateTeacherResponseDTO;
+import com.brightway.brightway_dropout.dto.teacher.response.*;
 import com.brightway.brightway_dropout.dto.course.response.CourseResponseDTO;
 import com.brightway.brightway_dropout.dto.common.response.DeleteResponseDTO;
 import com.brightway.brightway_dropout.dto.school.response.SchoolResponseDTO;
-import com.brightway.brightway_dropout.dto.teacher.response.TeacherResponseDTO;
-import com.brightway.brightway_dropout.dto.teacher.response.TeacherStatsResponseDTO;
-import com.brightway.brightway_dropout.dto.teacher.response.TeacherDetailDTO;
+import com.brightway.brightway_dropout.enumeration.EAttendanceStatus;
+import com.brightway.brightway_dropout.enumeration.ERiskLevel;
 import com.brightway.brightway_dropout.enumeration.EUserRole;
 import com.brightway.brightway_dropout.exception.ResourceNotFoundException;
 import com.brightway.brightway_dropout.exception.ResourceAlreadyExistsException;
+import com.brightway.brightway_dropout.model.Attendance;
 import com.brightway.brightway_dropout.model.Course;
+import com.brightway.brightway_dropout.model.Enrollment;
 import com.brightway.brightway_dropout.model.School;
+import com.brightway.brightway_dropout.model.Student;
 import com.brightway.brightway_dropout.model.Teacher;
 import com.brightway.brightway_dropout.model.User;
 import com.brightway.brightway_dropout.repository.IAuthRepository;
@@ -24,8 +26,12 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+
+import java.time.LocalDate;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Optional;
+import java.util.Set;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
@@ -240,6 +246,124 @@ public class TeacherServiceImpl implements ITeacherService {
             teacher.getSpecialization(),
             schoolDTO,
             courseDTOs
+        );
+    }
+    @Override
+    @Transactional(readOnly = true)
+    public TeacherDashboardStatsDTO getTeacherDashboardStats(UUID teacherId) {
+        Teacher teacher = teacherRepository.findByIdWithCourses(teacherId)
+            .orElseThrow(() -> new ResourceNotFoundException("Teacher with ID " + teacherId + " not found"));
+
+        // Total courses
+        int totalCourses = teacher.getCourses() != null ? teacher.getCourses().size() : 0;
+
+        // Collect all students from all courses taught by this teacher
+        Set<Student> students = new HashSet<>();
+        int atRiskStudents = 0;
+        if (teacher.getCourses() != null) {
+            for (Course course : teacher.getCourses()) {
+                if (course.getEnrollments() != null) {
+                    for (Enrollment enrollment : course.getEnrollments()) {
+                        Student student = enrollment.getStudent();
+                        if (student != null) {
+                            students.add(student);
+                            if (student.getDropoutPredictions() != null &&
+                                student.getDropoutPredictions().stream().anyMatch(dp -> dp.getRiskLevel() == ERiskLevel.HIGH)) {
+                                atRiskStudents++;
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        int totalStudents = students.size();
+
+        // Calculate today's attendance percentage for all students in these courses
+        LocalDate today = LocalDate.now();
+        int totalAttendanceRecords = 0;
+        int presentCount = 0;
+        for (Student student : students) {
+            if (student.getAttendanceRecords() != null) {
+                for (Attendance attendance : student.getAttendanceRecords()) {
+                    if (attendance.getDate().equals(today)) {
+                        totalAttendanceRecords++;
+                        if (attendance.getStatus() == EAttendanceStatus.PRESENT) {
+                            presentCount++;
+                        }
+                    }
+                }
+            }
+        }
+        double todayAttendancePercentage = totalAttendanceRecords > 0
+                ? (presentCount * 100.0) / totalAttendanceRecords
+                : 0.0;
+
+        return new TeacherDashboardStatsDTO(totalStudents, totalCourses, todayAttendancePercentage, atRiskStudents);
+    }
+    @Override
+    @Transactional(readOnly = true)
+    public TeacherCoursesStatsDTO getTeacherCoursesStats(UUID teacherId) {
+        Teacher teacher = teacherRepository.findByIdWithCourses(teacherId)
+            .orElseThrow(() -> new com.brightway.brightway_dropout.exception.ResourceNotFoundException("Teacher with ID " + teacherId + " not found"));
+
+        List<Course> courses = teacher.getCourses();
+        int totalCourses = courses != null ? courses.size() : 0;
+        int overallStudents = 0;
+        double totalAttendanceSum = 0;
+        int attendanceCourseCount = 0;
+        List<com.brightway.brightway_dropout.dto.teacher.response.CourseStatsDTO> courseStatsList = new java.util.ArrayList<>();
+
+        if (courses != null) {
+            for (Course course : courses) {
+                int courseTotalStudents = 0;
+                int courseTodayAttendanceRecords = 0;
+                int coursePresentCount = 0;
+                boolean active = course.isActive();
+
+                if (course.getEnrollments() != null) {
+                    java.util.Set<Student> courseStudents = new java.util.HashSet<>();
+                    for (Enrollment enrollment : course.getEnrollments()) {
+                        Student student = enrollment.getStudent();
+                        if (student != null) {
+                            courseStudents.add(student);
+                        }
+                    }
+                    courseTotalStudents = courseStudents.size();
+                    overallStudents += courseTotalStudents;
+
+                    // Attendance for today
+                    for (Student student : courseStudents) {
+                        if (student.getAttendanceRecords() != null) {
+                            for (Attendance attendance : student.getAttendanceRecords()) {
+                                if (attendance.getDate().equals(java.time.LocalDate.now())) {
+                                    courseTodayAttendanceRecords++;
+                                    if (attendance.getStatus() == EAttendanceStatus.PRESENT) {
+                                        coursePresentCount++;
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+                double todayAttendancePercentage = courseTodayAttendanceRecords > 0 ? (coursePresentCount * 100.0) / courseTodayAttendanceRecords : 0.0;
+                if (courseTodayAttendanceRecords > 0) {
+                    totalAttendanceSum += todayAttendancePercentage;
+                    attendanceCourseCount++;
+                }
+                courseStatsList.add(new CourseStatsDTO(
+                    course.getName(),
+                    courseTotalStudents,
+                    todayAttendancePercentage,
+                    active
+                ));
+            }
+        }
+        double averageAttendance = attendanceCourseCount > 0 ? totalAttendanceSum / attendanceCourseCount : 0.0;
+        return new TeacherCoursesStatsDTO(
+            totalCourses,
+            overallStudents,
+            averageAttendance,
+            courseStatsList
         );
     }
 }

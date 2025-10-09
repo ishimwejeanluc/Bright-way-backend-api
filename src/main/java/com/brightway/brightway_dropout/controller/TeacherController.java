@@ -96,4 +96,23 @@ public class TeacherController {
                                 HttpStatus.OK
                 );
         }
+
+        @GetMapping(value = "/dashboard/{teacherId}", produces = MediaType.APPLICATION_JSON_VALUE)
+        @PreAuthorize("hasRole('TEACHER') ")
+        public ResponseEntity<ApiResponse> getTeacherDashboardStats(@PathVariable UUID teacherId) {
+                var response = teacherService.getTeacherDashboardStats(teacherId);
+                return new ResponseEntity<>(
+                        new ApiResponse(true, "Teacher dashboard stats retrieved successfully", response),
+                        HttpStatus.OK
+                );
+        }
+            @GetMapping(value = "/courses-stats/{teacherId}", produces = MediaType.APPLICATION_JSON_VALUE)
+        @PreAuthorize("hasRole('TEACHER') ")
+        public ResponseEntity<ApiResponse> getTeacherCoursesStats(@PathVariable UUID teacherId) {
+                var response = teacherService.getTeacherCoursesStats(teacherId);
+                return new ResponseEntity<>(
+                        new ApiResponse(true, "Teacher courses stats retrieved successfully", response),
+                        HttpStatus.OK
+                );
+        }
 }
