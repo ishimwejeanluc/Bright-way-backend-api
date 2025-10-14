@@ -16,4 +16,5 @@ public interface ITeacherService {
     TeacherStatsResponseDTO getTeacherStatsBySchool(UUID schoolId);
     TeacherDashboardStatsDTO getTeacherDashboardStats(UUID teacherId);
     TeacherCoursesStatsDTO getTeacherCoursesStats(UUID teacherId);
+    TeacherAttendanceStatsDTO getTeacherAttendanceStats(UUID teacherId);
 }

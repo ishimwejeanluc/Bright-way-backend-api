@@ -1,8 +1,13 @@
+
+
+
 package com.brightway.brightway_dropout.service;
 
 import com.brightway.brightway_dropout.dto.teacher.request.CreateTeacherDTO;
 import com.brightway.brightway_dropout.dto.teacher.response.*;
 import com.brightway.brightway_dropout.dto.course.response.CourseResponseDTO;
+import com.brightway.brightway_dropout.dto.course.response.CourseStatsDTO;
+import com.brightway.brightway_dropout.dto.course.response.CourseWeeklyAttendanceTrendDTO;
 import com.brightway.brightway_dropout.dto.common.response.DeleteResponseDTO;
 import com.brightway.brightway_dropout.dto.school.response.SchoolResponseDTO;
 import com.brightway.brightway_dropout.enumeration.EAttendanceStatus;
@@ -27,7 +32,9 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.DayOfWeek;
 import java.time.LocalDate;
+import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Optional;
@@ -311,7 +318,7 @@ public class TeacherServiceImpl implements ITeacherService {
         int overallStudents = 0;
         double totalAttendanceSum = 0;
         int attendanceCourseCount = 0;
-        List<com.brightway.brightway_dropout.dto.teacher.response.CourseStatsDTO> courseStatsList = new java.util.ArrayList<>();
+        List<CourseStatsDTO> courseStatsList = new ArrayList<>();
 
         if (courses != null) {
             for (Course course : courses) {
@@ -364,6 +371,88 @@ public class TeacherServiceImpl implements ITeacherService {
             overallStudents,
             averageAttendance,
             courseStatsList
+        );
+    }
+         @Override
+    @Transactional(readOnly = true)
+    public TeacherAttendanceStatsDTO getTeacherAttendanceStats(UUID teacherId) {
+        Teacher teacher = teacherRepository.findByIdWithCourses(teacherId)
+            .orElseThrow(() -> new ResourceNotFoundException("Teacher with ID " + teacherId + " not found"));
+
+        List<Course> courses = teacher.getCourses();
+        int totalPresentToday = 0;
+        int totalAbsentToday = 0;
+        int allAttendanceRecords = 0;
+        int presentCount = 0;
+        List<CourseWeeklyAttendanceTrendDTO> weeklyTrends = new ArrayList<>();
+
+        if (courses != null) {
+            for (Course course : courses) {
+                Set<Student> courseStudents = new HashSet<>();
+                if (course.getEnrollments() != null) {
+                    for (Enrollment enrollment : course.getEnrollments()) {
+                        Student student = enrollment.getStudent();
+                        if (student != null) {
+                            courseStudents.add(student);
+                        }
+                    }
+                }
+                int coursePresentToday = 0;
+                int courseAbsentToday = 0;
+                List<Double> weeklyPercentages = new ArrayList<>();
+                LocalDate today = LocalDate.now();
+                for (Student student : courseStudents) {
+                    if (student.getAttendanceRecords() != null) {
+                        for (Attendance attendance : student.getAttendanceRecords()) {
+                            if (attendance.getDate().equals(today)) {
+                                if (attendance.getStatus() == EAttendanceStatus.PRESENT) {
+                                    totalPresentToday++;
+                                    coursePresentToday++;
+                                } else if (attendance.getStatus() == EAttendanceStatus.ABSENT) {
+                                    totalAbsentToday++;
+                                    courseAbsentToday++;
+                                }
+                            }
+                            allAttendanceRecords++;
+                            if (attendance.getStatus() == EAttendanceStatus.PRESENT) {
+                                presentCount++;
+                            }
+                        }
+                    }
+                }
+                // Weekly attendance trend for this course (last 7 weeks)
+                for (int week = 0; week < 7; week++) {
+                    LocalDate weekStart = today.minusWeeks(week).with(DayOfWeek.MONDAY);
+                    LocalDate weekEnd = weekStart.plusDays(6);
+                    int weekPresent = 0;
+                    int weekTotal = 0;
+                    for (Student student : courseStudents) {
+                        if (student.getAttendanceRecords() != null) {
+                            for (Attendance attendance : student.getAttendanceRecords()) {
+                                if (!attendance.getDate().isBefore(weekStart) && !attendance.getDate().isAfter(weekEnd)) {
+                                    weekTotal++;
+                                    if (attendance.getStatus() == EAttendanceStatus.PRESENT) {
+                                        weekPresent++;
+                                    }
+                                }
+                            }
+                        }
+                    }
+                    double weekPercentage = weekTotal > 0 ? (weekPresent * 100.0) / weekTotal : 0.0;
+                    weeklyPercentages.add(0, weekPercentage); 
+                }
+                weeklyTrends.add(new CourseWeeklyAttendanceTrendDTO(
+                    course.getName(),
+                    weeklyPercentages
+                ));
+            }
+        }
+        double overallAttendancePercentage = allAttendanceRecords > 0 ? (presentCount * 100.0) / allAttendanceRecords : 0.0;
+        return new TeacherAttendanceStatsDTO(
+            totalPresentToday,
+            totalAbsentToday,
+            overallAttendancePercentage,
+            weeklyTrends
         );
     }
 }

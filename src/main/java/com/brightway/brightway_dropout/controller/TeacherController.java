@@ -1,3 +1,4 @@
+
 package com.brightway.brightway_dropout.controller;
 
 import com.brightway.brightway_dropout.dto.teacher.request.CreateTeacherDTO;
@@ -112,6 +113,16 @@ public class TeacherController {
                 var response = teacherService.getTeacherCoursesStats(teacherId);
                 return new ResponseEntity<>(
                         new ApiResponse(true, "Teacher courses stats retrieved successfully", response),
+                        HttpStatus.OK
+                );
+        }
+
+         @GetMapping(value = "/attendance-stats/{teacherId}", produces = MediaType.APPLICATION_JSON_VALUE)
+        @PreAuthorize("hasRole('TEACHER')")
+        public ResponseEntity<ApiResponse> getTeacherAttendanceStats(@PathVariable UUID teacherId) {
+                var response = teacherService.getTeacherAttendanceStats(teacherId);
+                return new ResponseEntity<>(
+                        new ApiResponse(true, "Teacher attendance stats retrieved successfully", response),
                         HttpStatus.OK
                 );
         }

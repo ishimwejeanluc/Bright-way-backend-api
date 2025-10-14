@@ -1,4 +1,4 @@
-package com.brightway.brightway_dropout.dto.teacher.response;
+package com.brightway.brightway_dropout.dto.course.response;
 
 import lombok.AllArgsConstructor;
 import lombok.Data;
