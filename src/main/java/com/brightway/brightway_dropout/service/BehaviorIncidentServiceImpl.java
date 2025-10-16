@@ -4,8 +4,7 @@ package com.brightway.brightway_dropout.service;
 
 import com.brightway.brightway_dropout.dto.behaviorIncident.request.RegisterBehaviorIncidentDTO;
 import com.brightway.brightway_dropout.dto.behaviorIncident.response.RegisterBehaviorIncidentResponseDTO;
-import com.brightway.brightway_dropout.enumeration.EIncidentType;
-import com.brightway.brightway_dropout.enumeration.ESeverityLevel;
+import com.brightway.brightway_dropout.exception.ResourceNotFoundException;
 import com.brightway.brightway_dropout.model.BehaviorIncident;
 import com.brightway.brightway_dropout.model.Student;
 import com.brightway.brightway_dropout.repository.IBehaviorIncidentRepository;
@@ -14,7 +13,6 @@ import com.brightway.brightway_dropout.util.JwtUtil;
 
 import lombok.RequiredArgsConstructor;
 
-import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.UUID;
 
@@ -29,7 +27,7 @@ public class BehaviorIncidentServiceImpl implements IBehaviorIncidentService {
     @Override
     public RegisterBehaviorIncidentResponseDTO saveIncident(RegisterBehaviorIncidentDTO dto) {
         Student student = studentRepository.findById(dto.getStudentId())
-                .orElseThrow(() -> new RuntimeException("Student not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("Student not found"));
 
         UUID currentUser = jwtUtil.getCurrentUserId();
 
