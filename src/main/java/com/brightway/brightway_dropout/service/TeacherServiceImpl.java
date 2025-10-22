@@ -257,14 +257,13 @@ public class TeacherServiceImpl implements ITeacherService {
     }
     @Override
     @Transactional(readOnly = true)
-    public TeacherDashboardStatsDTO getTeacherDashboardStats(UUID teacherId) {
+    public TeacherDashboardStatsDTO getTeacherDashboardStats(UUID userId) {
+        UUID teacherId = getTeacherId(userId);
         Teacher teacher = teacherRepository.findByIdWithCourses(teacherId)
             .orElseThrow(() -> new ResourceNotFoundException("Teacher with ID " + teacherId + " not found"));
 
         // Total courses
         int totalCourses = teacher.getCourses() != null ? teacher.getCourses().size() : 0;
-
-        // Collect all students from all courses taught by this teacher
         Set<Student> students = new HashSet<>();
         int atRiskStudents = 0;
         if (teacher.getCourses() != null) {
@@ -284,8 +283,6 @@ public class TeacherServiceImpl implements ITeacherService {
             }
         }
         int totalStudents = students.size();
-
-        // Calculate today's attendance percentage for all students in these courses
         LocalDate today = LocalDate.now();
         int totalAttendanceRecords = 0;
         int presentCount = 0;
@@ -304,12 +301,12 @@ public class TeacherServiceImpl implements ITeacherService {
         double todayAttendancePercentage = totalAttendanceRecords > 0
                 ? (presentCount * 100.0) / totalAttendanceRecords
                 : 0.0;
-
         return new TeacherDashboardStatsDTO(totalStudents, totalCourses, todayAttendancePercentage, atRiskStudents);
     }
     @Override
     @Transactional(readOnly = true)
-    public TeacherCoursesStatsDTO getTeacherCoursesStats(UUID teacherId) {
+    public TeacherCoursesStatsDTO getTeacherCoursesStats(UUID userId) {
+        UUID teacherId = getTeacherId(userId);
         Teacher teacher = teacherRepository.findByIdWithCourses(teacherId)
             .orElseThrow(() -> new com.brightway.brightway_dropout.exception.ResourceNotFoundException("Teacher with ID " + teacherId + " not found"));
 
@@ -373,9 +370,10 @@ public class TeacherServiceImpl implements ITeacherService {
             courseStatsList
         );
     }
-         @Override
+    @Override
     @Transactional(readOnly = true)
-    public TeacherAttendanceStatsDTO getTeacherAttendanceStats(UUID teacherId) {
+    public TeacherAttendanceStatsDTO getTeacherAttendanceStats(UUID userId) {
+        UUID teacherId = getTeacherId(userId);
         Teacher teacher = teacherRepository.findByIdWithCourses(teacherId)
             .orElseThrow(() -> new ResourceNotFoundException("Teacher with ID " + teacherId + " not found"));
 
@@ -454,5 +452,10 @@ public class TeacherServiceImpl implements ITeacherService {
             overallAttendancePercentage,
             weeklyTrends
         );
+    }
+    public UUID getTeacherId(UUID userId){
+    Teacher teacher = teacherRepository.findByUserId(userId)
+            .orElseThrow(() -> new ResourceNotFoundException("User with ID " + userId + " not found"));
+        return teacher.getId();
     }
 }
