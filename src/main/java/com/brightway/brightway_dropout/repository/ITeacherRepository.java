@@ -15,9 +15,16 @@ public interface ITeacherRepository extends JpaRepository<Teacher, UUID> {
     Optional<Teacher> findById(UUID userId);
     Optional <Teacher> findByUserId(UUID userId);
 
+
     @Query("SELECT t FROM Teacher t LEFT JOIN FETCH t.courses WHERE t.id = :id")
     Optional<Teacher> findByIdWithCourses(@Param("id") UUID id);
 
     @Query("SELECT DISTINCT t FROM Teacher t LEFT JOIN FETCH t.courses WHERE t.school.id = :schoolId")
     List<Teacher> findAllBySchoolIdWithCourses(@Param("schoolId") UUID schoolId);
+
+    @Query("SELECT t FROM Teacher t LEFT JOIN FETCH t.courses WHERE t.user.id = :userId")
+    Optional<Teacher> findByUserIdWithCourses(@Param("userId") UUID userId);
+    
+
+
 }

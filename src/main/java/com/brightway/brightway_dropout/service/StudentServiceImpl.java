@@ -16,9 +16,12 @@ import com.brightway.brightway_dropout.model.School;
 import com.brightway.brightway_dropout.model.Student;
 import com.brightway.brightway_dropout.model.User;
 import com.brightway.brightway_dropout.repository.IAuthRepository;
+import com.brightway.brightway_dropout.repository.IEnrollmentRepository;
 import com.brightway.brightway_dropout.repository.IParentRepository;
 import com.brightway.brightway_dropout.repository.ISchoolRepository;
 import com.brightway.brightway_dropout.repository.IStudentRepository;
+import com.brightway.brightway_dropout.util.JwtUtil;
+
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
@@ -38,8 +41,9 @@ public class StudentServiceImpl implements IStudentService {
     private final IParentRepository parentRepository;
     private final IAuthRepository authRepository;
     private final ISchoolRepository schoolRepository;
+    private final IEnrollmentRepository enrollmentRepository;
     private final PasswordEncoder passwordEncoder;
-    private final com.brightway.brightway_dropout.util.JwtUtil jwtUtil;
+    private final JwtUtil jwtUtil;
 
     @Override
     public StudentStatsResponseDTO getStudentStatsBySchool(UUID schoolId) {
@@ -52,6 +56,7 @@ public class StudentServiceImpl implements IStudentService {
         double totalAttendancePercentage = calculateTodayAttendancePercentage(students);
         int totalCourses = students.stream().flatMap(s -> s.getEnrollments().stream()).map(e -> e.getCourse()).collect(Collectors.toSet()).size();
         List<StudentDetailDTO> studentDetails = students.stream().map(s -> new StudentDetailDTO(
+                s.getId(),
                 s.getUser() != null ? s.getUser().getName() : null,
                 getLatestRiskLevel(s),
                 calculateTodayAttendance(s),
@@ -166,5 +171,17 @@ public class StudentServiceImpl implements IStudentService {
             savedParent.getId(),
             "Student and parent registered successfully"
         );
+    }
+
+    @Override
+    public List<StudentDetailDTO> getStudentsByCourse(UUID courseId) {
+        List<Enrollment> enrollments = enrollmentRepository.findByCourseId(courseId);
+        
+        return enrollments.stream()
+                .map(enrollment -> new StudentDetailDTO(
+                    enrollment.getStudent().getId(),
+                    enrollment.getStudent().getUser().getName()
+                ))
+                .collect(Collectors.toList());
     }
 }

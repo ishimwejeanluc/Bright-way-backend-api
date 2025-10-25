@@ -10,6 +10,7 @@ import com.brightway.brightway_dropout.dto.course.response.CourseStatsDTO;
 import com.brightway.brightway_dropout.dto.course.response.CourseWeeklyAttendanceTrendDTO;
 import com.brightway.brightway_dropout.dto.common.response.DeleteResponseDTO;
 import com.brightway.brightway_dropout.dto.school.response.SchoolResponseDTO;
+import com.brightway.brightway_dropout.dto.student.response.StudentDetailDTO;
 import com.brightway.brightway_dropout.enumeration.EAttendanceStatus;
 import com.brightway.brightway_dropout.enumeration.ERiskLevel;
 import com.brightway.brightway_dropout.enumeration.EUserRole;
@@ -445,12 +446,51 @@ public class TeacherServiceImpl implements ITeacherService {
                 ));
             }
         }
+        
+        // Calculate individual student attendance percentages
+        Set<Student> allStudents = new HashSet<>();
+        if (courses != null) {
+            for (Course course : courses) {
+                if (course.getEnrollments() != null) {
+                    for (Enrollment enrollment : course.getEnrollments()) {
+                        Student student = enrollment.getStudent();
+                        if (student != null) {
+                            allStudents.add(student);
+                        }
+                    }
+                }
+            }
+        }
+        
+        List<StudentDetailDTO> studentsList = new ArrayList<>();
+        for (Student student : allStudents) {
+            int studentTotalRecords = 0;
+            int studentPresentCount = 0;
+            
+            if (student.getAttendanceRecords() != null) {
+                for (Attendance attendance : student.getAttendanceRecords()) {
+                    studentTotalRecords++;
+                    if (attendance.getStatus() == EAttendanceStatus.PRESENT) {
+                        studentPresentCount++;
+                    }
+                }
+            }
+            
+            int studentAttendancePercentage = studentTotalRecords > 0 ? 
+                (int) Math.round((studentPresentCount * 100.0) / studentTotalRecords) : 0;
+            
+            String studentName = student.getUser() != null ? student.getUser().getName() : "Unknown";
+            studentsList.add(new StudentDetailDTO(
+                student.getId(), studentAttendancePercentage, studentName));
+        }
+        
         double overallAttendancePercentage = allAttendanceRecords > 0 ? (presentCount * 100.0) / allAttendanceRecords : 0.0;
         return new TeacherAttendanceStatsDTO(
             totalPresentToday,
             totalAbsentToday,
             overallAttendancePercentage,
-            weeklyTrends
+            weeklyTrends,
+            studentsList
         );
     }
     public UUID getTeacherId(UUID userId){

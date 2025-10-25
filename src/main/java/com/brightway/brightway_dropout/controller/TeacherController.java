@@ -3,6 +3,7 @@ package com.brightway.brightway_dropout.controller;
 
 import com.brightway.brightway_dropout.dto.teacher.request.CreateTeacherDTO;
 import com.brightway.brightway_dropout.dto.teacher.response.CreateTeacherResponseDTO;
+import com.brightway.brightway_dropout.dto.teacher.response.TeacherAttendanceStatsDTO;
 import com.brightway.brightway_dropout.dto.common.response.DeleteResponseDTO;
 import com.brightway.brightway_dropout.dto.teacher.response.TeacherDetailDTO;
 import com.brightway.brightway_dropout.dto.teacher.response.TeacherResponseDTO;
@@ -120,7 +121,7 @@ public class TeacherController {
          @GetMapping(value = "/attendance-stats/{teacherId}", produces = MediaType.APPLICATION_JSON_VALUE)
         @PreAuthorize("hasRole('TEACHER')")
         public ResponseEntity<ApiResponse> getTeacherAttendanceStats(@PathVariable UUID teacherId) {
-                var response = teacherService.getTeacherAttendanceStats(teacherId);
+                TeacherAttendanceStatsDTO response = teacherService.getTeacherAttendanceStats(teacherId);
                 return new ResponseEntity<>(
                         new ApiResponse(true, "Teacher attendance stats retrieved successfully", response),
                         HttpStatus.OK

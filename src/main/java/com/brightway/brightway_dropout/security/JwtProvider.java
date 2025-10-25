@@ -1,8 +1,10 @@
 package com.brightway.brightway_dropout.security;
 
 import com.brightway.brightway_dropout.model.User;
+import com.brightway.brightway_dropout.model.Teacher;
 import com.brightway.brightway_dropout.model.School;
 import com.brightway.brightway_dropout.repository.ISchoolRepository;
+import com.brightway.brightway_dropout.repository.ITeacherRepository;
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.security.Keys;
 import org.springframework.beans.factory.annotation.Value;
@@ -12,6 +14,8 @@ import javax.crypto.SecretKey;
 import java.nio.charset.StandardCharsets;
 import java.util.Date;
 import java.util.Map;
+import java.util.List;
+import java.util.HashMap;
 
 @Component
 public class JwtProvider {
@@ -22,13 +26,15 @@ public class JwtProvider {
     private static final long EXPIRATION_TIME = 86400000*7; // 7 days in ms
 
     private final ISchoolRepository schoolRepository;
+    private final ITeacherRepository teacherRepository;
 
-    public JwtProvider(ISchoolRepository schoolRepository) {
+    public JwtProvider(ISchoolRepository schoolRepository, ITeacherRepository teacherRepository) {
         this.schoolRepository = schoolRepository;
+        this.teacherRepository = teacherRepository;
     }
 
     public String generateToken(User user) {
-        Map<String, Object> claims = new java.util.HashMap<>();
+        Map<String, Object> claims = new HashMap<>();
         claims.put("userId", user.getId());
         claims.put("email", user.getEmail());
         claims.put("role", user.getRole());
@@ -40,6 +46,31 @@ public class JwtProvider {
                 .ifPresent(school -> {
                     claims.put("schoolId", school.getId());
                     claims.put("schoolName", school.getName());
+                });
+        }
+        
+        // Add teacher-specific claims for teacher role
+        if (user.getRole() != null && user.getRole().toString().equalsIgnoreCase("TEACHER")) {
+            teacherRepository.findByUserIdWithCourses(user.getId())
+                .ifPresent(teacher -> {
+                    // Add school info
+                    if (teacher.getSchool() != null) {
+                        claims.put("schoolId", teacher.getSchool().getId());
+                        claims.put("schoolName", teacher.getSchool().getName());
+                    }
+                    
+                    // Add courses array
+                    if (teacher.getCourses() != null) {
+                        List<Map<String, Object>> courses = teacher.getCourses().stream()
+                            .map(course -> {
+                                Map<String, Object> courseInfo = new HashMap<>();
+                                courseInfo.put("courseId", course.getId().toString());
+                                courseInfo.put("courseName", course.getName());
+                                return courseInfo;
+                            })
+                            .toList();
+                        claims.put("courses", courses);
+                    }
                 });
         }
 
