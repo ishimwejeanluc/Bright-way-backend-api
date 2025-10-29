@@ -26,8 +26,13 @@ public class GradeServiceImpl implements IGradeService {
     public RegisterGradeBulkResponseDTO registerGrades(RegisterGradeBulkDTO dto) {
         List<UUID> savedIds = new ArrayList<>();
         for (StudentGradeDTO studentGrade : dto.getGrades()) {
-            Enrollment enrollment = enrollmentRepository.findById(studentGrade.getEnrollmentId())
-                    .orElseThrow(() -> new ResourceNotFoundException("Student not found in this Course" ));
+            // Find enrollment by studentId and courseId
+            Enrollment enrollment = enrollmentRepository.findByStudentIdAndCourseId(
+                    studentGrade.getStudentId(), 
+                    dto.getCourseId())
+                    .orElseThrow(() -> new ResourceNotFoundException(
+                        "Student with ID " + studentGrade.getStudentId() + " not found in course " + dto.getCourseId()));
+            
             Grade grade = new Grade();
             grade.setEnrollment(enrollment);
             grade.setName(dto.getGradeName());

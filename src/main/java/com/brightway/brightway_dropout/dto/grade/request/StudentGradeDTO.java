@@ -5,6 +5,6 @@ import java.util.UUID;
 
 @Data
 public class StudentGradeDTO {
-    private UUID enrollmentId;
+    private UUID studentId;
     private float marks;
 }
