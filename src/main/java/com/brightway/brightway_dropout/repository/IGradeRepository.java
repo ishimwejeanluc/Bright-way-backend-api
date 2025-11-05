@@ -1,3 +1,4 @@
+
 package com.brightway.brightway_dropout.repository;
 
 import com.brightway.brightway_dropout.model.Grade;
@@ -37,4 +38,25 @@ public interface IGradeRepository extends JpaRepository<Grade, UUID> {
         WHERE s.school_id = :schoolId
         """, nativeQuery = true)
     Object[] findOverallStats(@Param("schoolId") UUID schoolId);
+
+    // Get student grades by teacher's userId, grouped by course
+        // Get student grades by teacherId, grouped by course
+        @Query(value = """
+            SELECT 
+                c.name as course_name,
+                s.id as student_id,
+                u.name as student_name,
+                g.name as mark_name,
+                g.marks,
+                g.grade_type
+            FROM grade g
+            JOIN enrollment e ON g.enrollment_id = e.id
+            JOIN course c ON e.course_id = c.id
+            JOIN student s ON e.student_id = s.id
+            JOIN users u ON s.user_id = u.id
+            JOIN teacher t ON c.teacher_id = t.id
+            WHERE t.id = :teacherId
+            ORDER BY c.name, u.name, g.name
+            """, nativeQuery = true)
+        List<Object[]> findStudentGradesByTeacherId(@Param("teacherId") UUID teacherId);
 }
