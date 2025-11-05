@@ -21,4 +21,45 @@ public interface IAttendanceRepository extends JpaRepository<Attendance, UUID> {
     
     @Query("SELECT a FROM Attendance a JOIN Enrollment e ON a.student.id = e.student.id WHERE a.date = :date AND e.course.id = :courseId")
     List<Attendance> findByDateAndCourseId(@Param("date") LocalDate date, @Param("courseId") UUID courseId);
+    
+    // Simple attendance KPIs - just present and absent counts for today filtered by school
+    @Query(value = """
+        SELECT 
+            COUNT(CASE WHEN a.status = 'PRESENT' THEN 1 END),
+            COUNT(CASE WHEN a.status = 'ABSENT' THEN 1 END)
+        FROM attendance a
+        JOIN student s ON a.student_id = s.id
+        WHERE a.date = :date AND s.school_id = :schoolId
+        """, nativeQuery = true)
+    Object[] findAttendanceKPIs(@Param("date") LocalDate date, @Param("schoolId") UUID schoolId);
+    
+    @Query(value = """
+        SELECT 
+            TO_CHAR(a.date, 'Dy'),
+            a.date,
+            ROUND((COUNT(CASE WHEN a.status = 'PRESENT' THEN 1 END) * 100.0) / NULLIF(COUNT(*), 0), 1)
+        FROM attendance a
+        JOIN student s ON a.student_id = s.id
+        WHERE a.date >= :startDate AND a.date <= :endDate AND s.school_id = :schoolId
+        GROUP BY a.date
+        ORDER BY a.date
+        """, nativeQuery = true)
+    List<Object[]> findDailyAttendanceStats(@Param("startDate") LocalDate startDate, @Param("endDate") LocalDate endDate, @Param("schoolId") UUID schoolId);
+    
+    // Get total absences for the week filtered by school
+    @Query(value = """
+        SELECT COUNT(*)
+        FROM attendance a
+        JOIN student s ON a.student_id = s.id
+        WHERE a.status = 'ABSENT' AND a.date >= :startDate AND a.date <= :endDate AND s.school_id = :schoolId
+        """, nativeQuery = true)
+    Integer findTotalAbsencesForPeriod(@Param("startDate") LocalDate startDate, @Param("endDate") LocalDate endDate, @Param("schoolId") UUID schoolId);
+    
+    @Query(value = """
+        SELECT ROUND((COUNT(CASE WHEN a.status = 'PRESENT' THEN 1 END) * 100.0) / NULLIF(COUNT(*), 0), 1)
+        FROM attendance a
+        JOIN student s ON a.student_id = s.id
+        WHERE a.date >= :startDate AND a.date <= :endDate AND s.school_id = :schoolId
+        """, nativeQuery = true)
+    Double findAttendanceRateForPeriod(@Param("startDate") LocalDate startDate, @Param("endDate") LocalDate endDate, @Param("schoolId") UUID schoolId);
 }
