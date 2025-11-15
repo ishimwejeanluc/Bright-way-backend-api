@@ -13,6 +13,22 @@ import org.springframework.data.repository.query.Param;
 import com.brightway.brightway_dropout.model.Attendance;
 
 public interface IAttendanceRepository extends JpaRepository<Attendance, UUID> {
+    // Attendance rate for a student in a given period (weekly)
+    @Query(value = """
+        SELECT ROUND((COUNT(CASE WHEN a.status = 'PRESENT' THEN 1 END) * 100.0) / NULLIF(COUNT(*), 0), 1)
+        FROM attendance a
+        WHERE a.student_id = :studentId AND a.date >= :startDate AND a.date <= :endDate
+        """, nativeQuery = true)
+    Double findAttendanceRateForStudentInPeriod(@Param("studentId") UUID studentId, @Param("startDate") LocalDate startDate, @Param("endDate") LocalDate endDate);
+
+    // Attendance rate for a student in a specific course
+    @Query(value = """
+        SELECT ROUND((COUNT(CASE WHEN a.status = 'PRESENT' THEN 1 END) * 100.0) / NULLIF(COUNT(*), 0), 1)
+        FROM attendance a
+        JOIN enrollment e ON a.student_id = e.student_id
+        WHERE a.student_id = :studentId AND e.course_id = :courseId
+        """, nativeQuery = true)
+    Double findAttendanceRateForStudentInCourse(@Param("studentId") UUID studentId, @Param("courseId") UUID courseId);
     
     Optional<Attendance> findByStudentIdAndDate(UUID studentId, LocalDate date);
     

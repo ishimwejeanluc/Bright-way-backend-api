@@ -10,4 +10,5 @@ public interface IEnrollmentRepository extends JpaRepository<Enrollment, UUID> {
     Optional<Enrollment> findById(UUID enrollmentId);
     List<Enrollment> findByCourseId(UUID courseId);
     Optional<Enrollment> findByStudentIdAndCourseId(UUID studentId, UUID courseId);
+    List<Enrollment> findByStudentId(UUID studentId);
 }

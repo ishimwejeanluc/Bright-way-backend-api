@@ -4,9 +4,14 @@ import com.brightway.brightway_dropout.dto.student.request.CreateStudentWithPare
 import com.brightway.brightway_dropout.dto.student.response.CreateStudentWithParentResponseDTO;
 import com.brightway.brightway_dropout.dto.student.response.StudentDashboardDTO;
 import com.brightway.brightway_dropout.dto.student.response.StudentDetailDTO;
+import com.brightway.brightway_dropout.dto.student.response.StAttendanceOverviewDTO;
 import com.brightway.brightway_dropout.dto.student.response.StudentStatsResponseDTO;
+import com.brightway.brightway_dropout.service.IAttendanceService;
 import com.brightway.brightway_dropout.service.IStudentService;
 import com.brightway.brightway_dropout.util.ApiResponse;
+
+import jakarta.validation.Valid;
+
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -21,10 +26,19 @@ import java.util.UUID;
 @RequiredArgsConstructor
 public class StudentController {
     private final IStudentService studentService;
+    private final IAttendanceService attendanceService;
+    
+    @GetMapping("/{studentId}/attendance-overview")
+    @PreAuthorize("hasRole('STUDENT') or hasRole('TEACHER') or hasRole('PRINCIPAL')")
+    public ResponseEntity<ApiResponse> getStudentAttendanceOverview(@PathVariable UUID studentId) {
+        StAttendanceOverviewDTO response = attendanceService.getStudentAttendanceOverview(studentId);
+        return new ResponseEntity<>(new ApiResponse(true, "Attendance overview loaded", response), 
+        HttpStatus.OK);
+    }
 
     @PostMapping("/create-with-parent")
     @PreAuthorize("hasRole('PRINCIPAL')")
-    public ResponseEntity<ApiResponse> createStudentWithParent(@RequestBody CreateStudentWithParentRequestDTO dto) {
+    public ResponseEntity<ApiResponse> createStudentWithParent(@Valid @RequestBody CreateStudentWithParentRequestDTO dto) {
         CreateStudentWithParentResponseDTO response = studentService.createStudentWithParent(dto);
         return new ResponseEntity<>(
             new ApiResponse(true, "Student and parent registered successfully", response),

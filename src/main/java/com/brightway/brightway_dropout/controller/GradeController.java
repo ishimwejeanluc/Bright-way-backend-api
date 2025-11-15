@@ -8,6 +8,8 @@ import com.brightway.brightway_dropout.dto.grade.response.StudentGradesByTeacher
 import java.util.List;
 import java.util.UUID;
 import com.brightway.brightway_dropout.util.ApiResponse;
+
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -23,7 +25,7 @@ public class GradeController {
     private final IGradeService gradeService;
 
     @PostMapping("/bulk-register")
-    public ResponseEntity<ApiResponse> registerGrades(@RequestBody RegisterGradeBulkDTO dto) {
+    public ResponseEntity<ApiResponse> registerGrades(@Valid @RequestBody RegisterGradeBulkDTO dto) {
         RegisterGradeBulkResponseDTO response = gradeService.registerGrades(dto);
         return new ResponseEntity<>(
                 new ApiResponse(true, "Grades registered successfully", response),

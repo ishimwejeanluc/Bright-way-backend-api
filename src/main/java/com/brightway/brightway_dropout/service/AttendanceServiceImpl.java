@@ -2,12 +2,15 @@ package com.brightway.brightway_dropout.service;
 
 import com.brightway.brightway_dropout.dto.attendance.request.AttendanceRequestDTO;
 import com.brightway.brightway_dropout.dto.attendance.response.*;
+import com.brightway.brightway_dropout.dto.student.response.StAttendanceOverviewDTO;
 import com.brightway.brightway_dropout.enumeration.EAttendanceStatus;
 import com.brightway.brightway_dropout.exception.ResourceAlreadyExistsException;
 import com.brightway.brightway_dropout.exception.ResourceNotFoundException;
 import com.brightway.brightway_dropout.model.Attendance;
+import com.brightway.brightway_dropout.model.Enrollment;
 import com.brightway.brightway_dropout.model.Student;
 import com.brightway.brightway_dropout.repository.IAttendanceRepository;
+import com.brightway.brightway_dropout.repository.IEnrollmentRepository;
 import com.brightway.brightway_dropout.repository.IStudentRepository;
 import com.brightway.brightway_dropout.repository.IGradeRepository;
 import lombok.RequiredArgsConstructor;
@@ -21,6 +24,7 @@ import java.util.Map;
 import java.util.UUID;
 import java.util.function.Function;
 import java.util.stream.Collectors;
+import com.brightway.brightway_dropout.util.TypeSafeUtils;
 
 @Service
 @RequiredArgsConstructor
@@ -29,6 +33,44 @@ public class AttendanceServiceImpl implements IAttendanceService {
     private final IAttendanceRepository attendanceRepository;
     private final IStudentRepository studentRepository;
     private final IGradeRepository gradeRepository;
+    private final IEnrollmentRepository enrollmentRepository;
+   
+    @Override
+    @Transactional(readOnly = true)
+    public StAttendanceOverviewDTO getStudentAttendanceOverview(UUID studentId) {
+        // Overall attendance percentage
+        Double overallAttendance = attendanceRepository.findAttendanceRateForStudent(studentId);
+        if (overallAttendance == null) overallAttendance = 0.0;
+
+        // Weekly attendance percentages (last 4 weeks)
+        java.time.LocalDate today = java.time.LocalDate.now();
+        java.util.Map<String, Double> weeklyAttendance = new java.util.LinkedHashMap<>();
+        for (int i = 0; i < 4; i++) {
+            java.time.LocalDate startOfWeek = today.minusWeeks(i).with(java.time.DayOfWeek.MONDAY);
+            java.time.LocalDate endOfWeek = startOfWeek.plusDays(6);
+            Double weekAttendance = attendanceRepository.findAttendanceRateForStudentInPeriod(studentId, startOfWeek, endOfWeek);
+            if (weekAttendance == null) weekAttendance = 0.0;
+            String label = "Week " + (4 - i) + " (" + startOfWeek + ")";
+            weeklyAttendance.put(label, weekAttendance);
+        }
+
+        // Per-course attendance percentages
+        java.util.Map<String, Double> courseAttendance = new java.util.LinkedHashMap<>();
+        List<Enrollment> enrollments = enrollmentRepository.findByStudentId(studentId);
+        for (Enrollment enrollment : enrollments) {
+            UUID courseId = enrollment.getCourse().getId();
+            String courseName = enrollment.getCourse().getName();
+            Double courseAttendanceRate = attendanceRepository.findAttendanceRateForStudentInCourse(studentId, courseId);
+            if (courseAttendanceRate == null) courseAttendanceRate = 0.0;
+            courseAttendance.put(courseName, courseAttendanceRate);
+        }
+
+        return new com.brightway.brightway_dropout.dto.student.response.StAttendanceOverviewDTO(
+            overallAttendance,
+            weeklyAttendance,
+            courseAttendance
+        );
+    }
     
     @Override
     @Transactional
@@ -110,8 +152,8 @@ public class AttendanceServiceImpl implements IAttendanceService {
         // Unpack nested array for KPIs
         Object[] kpiStats = kpiData.length > 0 && kpiData[0] != null ? (Object[]) kpiData[0] : new Object[2];
         AttendanceKPIsDTO kpisDTO = new AttendanceKPIsDTO(
-            kpiStats.length > 0 ? safeToInteger(kpiStats, 0) : 0,
-            kpiStats.length > 1 ? safeToInteger(kpiStats, 1) : 0
+            kpiStats.length > 0 ? TypeSafeUtils.safeToInteger(kpiStats, 0) : 0,
+            kpiStats.length > 1 ? TypeSafeUtils.safeToInteger(kpiStats, 1) : 0
         );
         
         // Get daily attendance stats from database
@@ -119,7 +161,7 @@ public class AttendanceServiceImpl implements IAttendanceService {
         Map<LocalDate, Double> attendanceMap = dailyStatsData.stream()
                 .collect(Collectors.toMap(
                     data -> safeToLocalDate(data, 1),      // date - using safe method
-                    data -> safeToDouble(data, 2)          // attendance
+                    data -> TypeSafeUtils.safeToDouble(data, 2)          // attendance
                 ));
         
         // Generate 7 days including weekends/future dates with 0.0
@@ -148,8 +190,8 @@ public class AttendanceServiceImpl implements IAttendanceService {
         List<Object[]> subjectData = gradeRepository.findSubjectPerformance(schoolId);
         List<SubjectPerformanceDTO> subjectPerformance = subjectData.stream()
                 .map(data -> new SubjectPerformanceDTO(
-                    data.length > 0 ? safeToString(data, 0) : "",
-                    data.length > 1 ? safeToDouble(data, 1) : 0.0
+                    data.length > 0 ? TypeSafeUtils.safeToString(data, 0) : "",
+                    data.length > 1 ? TypeSafeUtils.safeToDouble(data, 1) : 0.0
                 ))
                 .collect(Collectors.toList());
         
@@ -169,42 +211,6 @@ public class AttendanceServiceImpl implements IAttendanceService {
     }
     
     // Helper methods for safe casting
-    private Integer safeToInteger(Object[] array, int index) {
-        if (array == null || index >= array.length || array[index] == null) {
-            return 0;
-        }
-        Object value = array[index];
-        if (value instanceof Number) {
-            return ((Number) value).intValue();
-        }
-        try {
-            return Integer.valueOf(value.toString());
-        } catch (NumberFormatException e) {
-            return 0;
-        }
-    }
-    
-    private Double safeToDouble(Object[] array, int index) {
-        if (array == null || index >= array.length || array[index] == null) {
-            return 0.0;
-        }
-        Object value = array[index];
-        if (value instanceof Number) {
-            return ((Number) value).doubleValue();
-        }
-        try {
-            return Double.valueOf(value.toString());
-        } catch (NumberFormatException e) {
-            return 0.0;
-        }
-    }
-    
-    private String safeToString(Object[] array, int index) {
-        if (array == null || index >= array.length || array[index] == null) {
-            return "";
-        }
-        return array[index].toString();
-    }
     
     private LocalDate safeToLocalDate(Object[] array, int index) {
         if (array == null || index >= array.length || array[index] == null) {

@@ -6,6 +6,8 @@ import com.brightway.brightway_dropout.dto.behaviorIncident.response.BehaviorInc
 import com.brightway.brightway_dropout.dto.behaviorIncident.response.RegisterBehaviorIncidentResponseDTO;
 import com.brightway.brightway_dropout.service.IBehaviorIncidentService;
 import com.brightway.brightway_dropout.util.ApiResponse;
+
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 
 import java.util.UUID;
@@ -23,7 +25,7 @@ public class BehaviorIncidentController {
     private final IBehaviorIncidentService behaviorIncidentService;
 
     @PostMapping
-    public ResponseEntity<ApiResponse> saveIncident(@RequestBody RegisterBehaviorIncidentDTO registerBehaviordto) {
+    public ResponseEntity<ApiResponse> saveIncident(@Valid @RequestBody RegisterBehaviorIncidentDTO registerBehaviordto) {
         RegisterBehaviorIncidentResponseDTO response = behaviorIncidentService.saveIncident(registerBehaviordto);
         return new ResponseEntity<>(
                 new ApiResponse(true, "Behavior incident saved successfully", response),
