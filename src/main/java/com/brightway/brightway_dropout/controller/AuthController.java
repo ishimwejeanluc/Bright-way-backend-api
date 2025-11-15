@@ -4,7 +4,7 @@ import com.brightway.brightway_dropout.dto.user.request.RegisterUserDTO;
 import com.brightway.brightway_dropout.dto.user.request.SignInDTO;
 import com.brightway.brightway_dropout.dto.user.response.LoginResponseDTO;
 import com.brightway.brightway_dropout.dto.user.response.RegisterUserResponseDTO;
-import com.brightway.brightway_dropout.service.AuthServiceImpl;
+import com.brightway.brightway_dropout.service.IAuthService;
 import com.brightway.brightway_dropout.util.ApiResponse;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
@@ -20,7 +20,7 @@ import jakarta.validation.Valid;
 @RestController
 @RequestMapping("/api/auth")
 public class AuthController {
-    private final AuthServiceImpl authService;
+    private final IAuthService authService;
 
 
     @PostMapping(value = "/login",consumes = MediaType.APPLICATION_JSON_VALUE,produces = MediaType.APPLICATION_JSON_VALUE)

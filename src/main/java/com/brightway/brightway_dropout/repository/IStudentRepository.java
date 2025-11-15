@@ -15,4 +15,5 @@ public interface IStudentRepository extends JpaRepository<Student, UUID> {
 
     @Query("SELECT DISTINCT s FROM Student s LEFT JOIN FETCH s.enrollments WHERE s.school.id = :schoolId")
     List<Student> findAllBySchoolIdWithEnrollments(@Param("schoolId") UUID schoolId);
+
 }

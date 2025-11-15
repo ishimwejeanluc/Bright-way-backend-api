@@ -4,7 +4,7 @@ import com.brightway.brightway_dropout.dto.school.request.CreateSchoolDTO;
 import com.brightway.brightway_dropout.dto.school.response.CreateSchoolResponseDTO;
 import com.brightway.brightway_dropout.dto.common.response.DeleteResponseDTO;
 import com.brightway.brightway_dropout.dto.school.response.SchoolResponseDTO;
-import com.brightway.brightway_dropout.service.SchoolServiceImpl;
+import com.brightway.brightway_dropout.service.ISchoolService;
 import com.brightway.brightway_dropout.util.ApiResponse;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -21,7 +21,7 @@ import java.util.UUID;
 @RequestMapping("/api/schools")
 @RequiredArgsConstructor
 public class SchoolController {
-    private final SchoolServiceImpl schoolService;
+    private final ISchoolService schoolService;
 
     @PutMapping(value = "/{id}", consumes = MediaType.APPLICATION_JSON_VALUE, produces = MediaType.APPLICATION_JSON_VALUE)
     @PreAuthorize("hasRole('PRINCIPAL')")

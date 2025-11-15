@@ -1,14 +1,16 @@
+    
 package com.brightway.brightway_dropout.repository;
-
-import com.brightway.brightway_dropout.model.Attendance;
-import org.springframework.data.jpa.repository.JpaRepository;
-import org.springframework.data.jpa.repository.Query;
-import org.springframework.data.repository.query.Param;
 
 import java.time.LocalDate;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
+
+import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
+
+import com.brightway.brightway_dropout.model.Attendance;
 
 public interface IAttendanceRepository extends JpaRepository<Attendance, UUID> {
     
@@ -62,4 +64,22 @@ public interface IAttendanceRepository extends JpaRepository<Attendance, UUID> {
         WHERE a.date >= :startDate AND a.date <= :endDate AND s.school_id = :schoolId
         """, nativeQuery = true)
     Double findAttendanceRateForPeriod(@Param("startDate") LocalDate startDate, @Param("endDate") LocalDate endDate, @Param("schoolId") UUID schoolId);
+
+    // Attendance rate for a specific student
+    @Query(value = """
+        SELECT ROUND((COUNT(CASE WHEN a.status = 'PRESENT' THEN 1 END) * 100.0) / NULLIF(COUNT(*), 0), 1)
+        FROM attendance a
+        WHERE a.student_id = :studentId
+        """, nativeQuery = true)
+    Double findAttendanceRateForStudent(@Param("studentId") UUID studentId);
+
+    // Attendance overview by day for a specific student
+    @Query(value = """
+        SELECT a.date, ROUND((COUNT(CASE WHEN a.status = 'PRESENT' THEN 1 END) * 100.0) / NULLIF(COUNT(*), 0), 1)
+        FROM attendance a
+        WHERE a.student_id = :studentId
+        GROUP BY a.date
+        ORDER BY a.date
+        """, nativeQuery = true)
+    List<Object[]> findAttendanceOverviewByDayForStudent(@Param("studentId") UUID studentId);
 }

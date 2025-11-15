@@ -5,7 +5,7 @@ import com.brightway.brightway_dropout.dto.course.response.CourseResponseDTO;
 import com.brightway.brightway_dropout.dto.course.response.CourseStatsResponseDTO;
 import com.brightway.brightway_dropout.dto.course.response.CreateCourseResponseDTO;
 import com.brightway.brightway_dropout.dto.common.response.DeleteResponseDTO;
-import com.brightway.brightway_dropout.service.CourseServiceImpl;
+import com.brightway.brightway_dropout.service.ICourseService;
 import com.brightway.brightway_dropout.util.ApiResponse;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -24,7 +24,7 @@ import java.util.UUID;
 @RequiredArgsConstructor
 public class CourseController {
 
-    private final CourseServiceImpl courseService;
+    private final ICourseService courseService;
 
     @PostMapping(value = "/create", consumes = MediaType.APPLICATION_JSON_VALUE, produces = MediaType.APPLICATION_JSON_VALUE)
     @PreAuthorize("hasRole('PRINCIPAL')")

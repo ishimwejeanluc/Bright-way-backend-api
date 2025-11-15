@@ -2,6 +2,7 @@ package com.brightway.brightway_dropout.controller;
 
 import com.brightway.brightway_dropout.dto.student.request.CreateStudentWithParentRequestDTO;
 import com.brightway.brightway_dropout.dto.student.response.CreateStudentWithParentResponseDTO;
+import com.brightway.brightway_dropout.dto.student.response.StudentDashboardDTO;
 import com.brightway.brightway_dropout.dto.student.response.StudentDetailDTO;
 import com.brightway.brightway_dropout.dto.student.response.StudentStatsResponseDTO;
 import com.brightway.brightway_dropout.service.IStudentService;
@@ -49,5 +50,12 @@ public class StudentController {
             new ApiResponse(true, "Students retrieved successfully", response),
             HttpStatus.OK
         );
+    }
+    
+    @GetMapping("/dashboard/{studentId}")
+    @PreAuthorize("hasRole('STUDENT') or hasRole('TEACHER')")
+    public ResponseEntity<ApiResponse> getStudentDashboard(@PathVariable UUID studentId) {
+        StudentDashboardDTO dashboard = studentService.getStudentDashboard(studentId);
+        return ResponseEntity.ok(new ApiResponse(true, "Student dashboard data loaded", dashboard));
     }
 }

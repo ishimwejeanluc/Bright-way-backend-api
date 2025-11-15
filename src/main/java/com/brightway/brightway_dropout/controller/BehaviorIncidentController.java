@@ -4,7 +4,7 @@ package com.brightway.brightway_dropout.controller;
 import com.brightway.brightway_dropout.dto.behaviorIncident.request.RegisterBehaviorIncidentDTO;
 import com.brightway.brightway_dropout.dto.behaviorIncident.response.BehaviorIncidentStatsResponseDTO;
 import com.brightway.brightway_dropout.dto.behaviorIncident.response.RegisterBehaviorIncidentResponseDTO;
-import com.brightway.brightway_dropout.service.BehaviorIncidentServiceImpl;
+import com.brightway.brightway_dropout.service.IBehaviorIncidentService;
 import com.brightway.brightway_dropout.util.ApiResponse;
 import lombok.RequiredArgsConstructor;
 
@@ -20,7 +20,7 @@ import org.springframework.web.bind.annotation.*;
 @RequiredArgsConstructor
 public class BehaviorIncidentController {
 
-    private final BehaviorIncidentServiceImpl behaviorIncidentService;
+    private final IBehaviorIncidentService behaviorIncidentService;
 
     @PostMapping
     public ResponseEntity<ApiResponse> saveIncident(@RequestBody RegisterBehaviorIncidentDTO registerBehaviordto) {

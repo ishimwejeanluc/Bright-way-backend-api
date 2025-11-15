@@ -9,6 +9,7 @@ import com.brightway.brightway_dropout.dto.student.response.StudentDetailDTO;
 import com.brightway.brightway_dropout.dto.student.response.StudentStatsResponseDTO;
 import com.brightway.brightway_dropout.enumeration.EAttendanceStatus;
 import com.brightway.brightway_dropout.enumeration.ERiskLevel;
+import com.brightway.brightway_dropout.model.DropoutPrediction;
 import com.brightway.brightway_dropout.model.Enrollment;
 import com.brightway.brightway_dropout.model.Grade;
 import com.brightway.brightway_dropout.model.Parent;
@@ -20,6 +21,10 @@ import com.brightway.brightway_dropout.repository.IEnrollmentRepository;
 import com.brightway.brightway_dropout.repository.IParentRepository;
 import com.brightway.brightway_dropout.repository.ISchoolRepository;
 import com.brightway.brightway_dropout.repository.IStudentRepository;
+import com.brightway.brightway_dropout.repository.IAttendanceRepository;
+import com.brightway.brightway_dropout.repository.IGradeRepository;
+import com.brightway.brightway_dropout.repository.IBehaviorIncidentRepository;
+import com.brightway.brightway_dropout.repository.IDropoutPredictionRepository;
 import com.brightway.brightway_dropout.util.JwtUtil;
 
 import lombok.RequiredArgsConstructor;
@@ -33,6 +38,10 @@ import java.time.LocalDate;
 import java.util.List;
 import java.util.UUID;
 import java.util.stream.Collectors;
+import com.brightway.brightway_dropout.dto.student.response.StudentDashboardDTO;
+import com.brightway.brightway_dropout.dto.grade.response.StudentPerformanceTrendDTO;
+import com.brightway.brightway_dropout.dto.attendance.response.AttendanceStudentOverviewDTO;
+import java.util.ArrayList;
 
 @Service
 @RequiredArgsConstructor
@@ -44,6 +53,57 @@ public class StudentServiceImpl implements IStudentService {
     private final IEnrollmentRepository enrollmentRepository;
     private final PasswordEncoder passwordEncoder;
     private final JwtUtil jwtUtil;
+    private final IAttendanceRepository attendanceRepository;
+    private final IGradeRepository gradeRepository;
+    private final IBehaviorIncidentRepository behaviorIncidentRepository;
+    private final IDropoutPredictionRepository dropoutPredictionRepository;
+
+    @Override
+    public StudentDashboardDTO getStudentDashboard(UUID studentId) {
+        // Attendance Rate
+        Double attendanceRate = attendanceRepository.findAttendanceRateForStudent(studentId);
+        // Average GPA
+        Double averageGPA = gradeRepository.findAverageGPAForStudent(studentId);
+        // Behavior Incidents
+        Integer behaviorIncidents = behaviorIncidentRepository.countByStudentId(studentId);
+    // Latest Dropout Prediction
+    DropoutPrediction latestPrediction = dropoutPredictionRepository.findTopByStudentIdOrderByPredictedAtDesc(studentId);
+    String riskLevel = latestPrediction != null ? latestPrediction.getRiskLevel().name() : null;
+    Float probabilityPercent = latestPrediction != null ? latestPrediction.getProbability() * 100 : null;
+
+        // Performance Trend (by grade type)
+        List<Object[]> trendRows = gradeRepository.findPerformanceTrendByGradeTypeForStudent(studentId);
+        List<StudentPerformanceTrendDTO> performanceTrend = new ArrayList<>();
+        if (trendRows != null) {
+            for (Object[] row : trendRows) {
+                String gradeType = row[0] != null ? row[0].toString() : "";
+                double avgMarks = row[1] != null ? Double.parseDouble(row[1].toString()) : 0.0;
+                performanceTrend.add(new StudentPerformanceTrendDTO(gradeType, avgMarks));
+            }
+        }
+
+        // Attendance Overview (by day)
+        List<Object[]> attendanceRows = attendanceRepository.findAttendanceOverviewByDayForStudent(studentId);
+        List<AttendanceStudentOverviewDTO> attendanceOverview = new ArrayList<>();
+        if (attendanceRows != null) {
+            for (Object[] row : attendanceRows) {
+                String day = row[0] != null ? row[0].toString() : "";
+                double percent = row[1] != null ? Double.parseDouble(row[1].toString()) : 0.0;
+                attendanceOverview.add(new AttendanceStudentOverviewDTO(day, percent));
+            }
+        }
+
+        // You may need to update StudentDashboardDTO to include riskLevel and probability fields if not present
+        return new StudentDashboardDTO(
+            attendanceRate != null ? attendanceRate : 0.0,
+            averageGPA != null ? averageGPA : 0.0,
+            behaviorIncidents != null ? behaviorIncidents : 0,
+            riskLevel,
+            probabilityPercent,
+            performanceTrend,
+            attendanceOverview
+        );
+    }
 
     @Override
     public StudentStatsResponseDTO getStudentStatsBySchool(UUID schoolId) {

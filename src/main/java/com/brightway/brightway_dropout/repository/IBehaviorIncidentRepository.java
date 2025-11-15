@@ -1,3 +1,4 @@
+   
 package com.brightway.brightway_dropout.repository;
 
 import com.brightway.brightway_dropout.model.BehaviorIncident;
@@ -20,4 +21,7 @@ public interface IBehaviorIncidentRepository extends JpaRepository<BehaviorIncid
            "JOIN c.teacher t " +
            "WHERE t.id = :teacherId")
     List<BehaviorIncident> findByTeacherId(@Param("teacherId") UUID teacherId);
+
+    @Query("SELECT COUNT(bi) FROM BehaviorIncident bi WHERE bi.student.id = :studentId")
+    Integer countByStudentId(@Param("studentId") UUID studentId);
 }
