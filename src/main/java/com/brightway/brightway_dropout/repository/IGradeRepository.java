@@ -11,6 +11,16 @@ import java.util.List;
 import java.util.UUID;
 
 public interface IGradeRepository extends JpaRepository<Grade, UUID> {
+    // Get all marks for a student per course with details
+    @Query(value = """
+        SELECT c.name as course_name, g.grade_type, g.name as mark_title, g.marks as score
+        FROM grade g
+        JOIN enrollment e ON g.enrollment_id = e.id
+        JOIN course c ON e.course_id = c.id
+        WHERE e.student_id = :studentId
+        ORDER BY c.name, g.name
+        """, nativeQuery = true)
+    List<Object[]> findAllCourseMarksForStudent(@Param("studentId") UUID studentId);
     
     // Subject performance - subject name and current average filtered by school
     @Query(value = """

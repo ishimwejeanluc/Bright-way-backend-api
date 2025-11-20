@@ -1,12 +1,9 @@
 package com.brightway.brightway_dropout.controller;
 
 import com.brightway.brightway_dropout.dto.student.request.CreateStudentWithParentRequestDTO;
-import com.brightway.brightway_dropout.dto.student.response.CreateStudentWithParentResponseDTO;
-import com.brightway.brightway_dropout.dto.student.response.StudentDashboardDTO;
-import com.brightway.brightway_dropout.dto.student.response.StudentDetailDTO;
-import com.brightway.brightway_dropout.dto.student.response.StAttendanceOverviewDTO;
-import com.brightway.brightway_dropout.dto.student.response.StudentStatsResponseDTO;
+import com.brightway.brightway_dropout.dto.student.response.*;
 import com.brightway.brightway_dropout.service.IAttendanceService;
+import com.brightway.brightway_dropout.service.ICourseService;
 import com.brightway.brightway_dropout.service.IStudentService;
 import com.brightway.brightway_dropout.util.ApiResponse;
 
@@ -27,6 +24,14 @@ import java.util.UUID;
 public class StudentController {
     private final IStudentService studentService;
     private final IAttendanceService attendanceService;
+    private final ICourseService courseService;
+
+    @GetMapping("/{studentId}/course-overview")
+    @PreAuthorize("hasRole('STUDENT') or hasRole('TEACHER') or hasRole('PRINCIPAL')")
+    public ResponseEntity<ApiResponse> getStudentCourseOverview(@PathVariable UUID studentId) {
+        List<StCourseOverviewDTO> response = courseService.getStudentCourseOverview(studentId);
+        return new ResponseEntity<>(new ApiResponse(true, "Course overview loaded", response), HttpStatus.OK);
+    }
     
     @GetMapping("/{studentId}/attendance-overview")
     @PreAuthorize("hasRole('STUDENT') or hasRole('TEACHER') or hasRole('PRINCIPAL')")
