@@ -13,6 +13,18 @@ import org.springframework.data.repository.query.Param;
 import com.brightway.brightway_dropout.model.Attendance;
 
 public interface IAttendanceRepository extends JpaRepository<Attendance, UUID> {
+    // Find the most missed class for a student (by absence count)
+    @Query(value = """
+        SELECT c.name, COUNT(*) AS total_missed
+        FROM attendance a
+        JOIN enrollment e ON a.student_id = e.student_id
+        JOIN course c ON e.course_id = c.id
+        WHERE a.student_id = :studentId AND a.status = 'ABSENT'
+        GROUP BY c.name
+        ORDER BY total_missed DESC
+        LIMIT 1
+        """, nativeQuery = true)
+    Object[] findMostMissedClassForStudent(@Param("studentId") UUID studentId);
     // Attendance rate for a student in a given period (weekly)
     @Query(value = """
         SELECT ROUND((COUNT(CASE WHEN a.status = 'PRESENT' THEN 1 END) * 100.0) / NULLIF(COUNT(*), 0), 1)

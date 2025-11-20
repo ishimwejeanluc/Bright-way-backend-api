@@ -12,4 +12,6 @@ public class StAttendanceOverviewDTO {
     private double overallAttendancePercentage;
     private Map<String, Double> weeklyAttendancePercentages; // week label -> percentage
     private Map<String, Double> courseAttendancePercentages; // course name -> percentage
+    private String mostMissedClassName;
+    private int mostMissedClassTotal;
 }

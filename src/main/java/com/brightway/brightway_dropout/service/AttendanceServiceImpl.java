@@ -65,10 +65,22 @@ public class AttendanceServiceImpl implements IAttendanceService {
             courseAttendance.put(courseName, courseAttendanceRate);
         }
 
+        // Find most missed class
+        String mostMissedClassName = null;
+        int mostMissedClassTotal = 0;
+        Object[] missedClass = attendanceRepository.findMostMissedClassForStudent(studentId);
+        if (missedClass != null && missedClass.length > 0 && missedClass[0] instanceof Object[] && ((Object[]) missedClass[0]).length == 2) {
+            Object[] row = (Object[]) missedClass[0];
+            mostMissedClassName = row[0] != null ? row[0].toString() : null;
+            mostMissedClassTotal = row[1] != null ? Integer.parseInt(row[1].toString()) : 0;
+        }
+
         return new com.brightway.brightway_dropout.dto.student.response.StAttendanceOverviewDTO(
             overallAttendance,
             weeklyAttendance,
-            courseAttendance
+            courseAttendance,
+            mostMissedClassName,
+            mostMissedClassTotal
         );
     }
     
