@@ -22,7 +22,7 @@ public class AttendanceController {
     
     private final IAttendanceService attendanceService;
     
-    @PostMapping(value = "/bulk-save", consumes = MediaType.APPLICATION_JSON_VALUE, produces = MediaType.APPLICATION_JSON_VALUE)
+    @PostMapping(value = "/bulk-save")
     @PreAuthorize("hasRole('TEACHER') or hasRole('PRINCIPAL')")
     public ResponseEntity<ApiResponse> saveBulkAttendance(@Valid @RequestBody AttendanceRequestDTO requestDTO) {
         AttendanceResponseDTO response = attendanceService.saveBulkAttendance(requestDTO);
@@ -32,7 +32,7 @@ public class AttendanceController {
         );
     }
 
-    @GetMapping(value = "/stats-overview/{schoolId}", produces = MediaType.APPLICATION_JSON_VALUE)
+    @GetMapping(value = "/stats-overview/{schoolId}")
     @PreAuthorize("hasRole('PRINCIPAL')")
     public ResponseEntity<ApiResponse> getAttendanceOverview(@PathVariable UUID schoolId) {
         AttendanceOverviewResponseDTO response = attendanceService.getAttendanceOverview(schoolId);

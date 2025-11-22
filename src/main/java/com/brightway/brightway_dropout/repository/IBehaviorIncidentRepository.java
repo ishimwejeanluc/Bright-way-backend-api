@@ -24,4 +24,6 @@ public interface IBehaviorIncidentRepository extends JpaRepository<BehaviorIncid
 
     @Query("SELECT COUNT(bi) FROM BehaviorIncident bi WHERE bi.student.id = :studentId")
     Integer countByStudentId(@Param("studentId") UUID studentId);
+
+    List<BehaviorIncident> findByStudentId(UUID studentId);
 }

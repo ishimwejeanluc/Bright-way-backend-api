@@ -3,9 +3,8 @@ package com.brightway.brightway_dropout.service;
 
 
 import com.brightway.brightway_dropout.dto.behaviorIncident.request.RegisterBehaviorIncidentDTO;
-import com.brightway.brightway_dropout.dto.behaviorIncident.response.BehaviorIncidentReportDTO;
-import com.brightway.brightway_dropout.dto.behaviorIncident.response.BehaviorIncidentStatsResponseDTO;
-import com.brightway.brightway_dropout.dto.behaviorIncident.response.RegisterBehaviorIncidentResponseDTO;
+import com.brightway.brightway_dropout.dto.behaviorIncident.response.*;
+import com.brightway.brightway_dropout.model.BehaviorIncident;
 import com.brightway.brightway_dropout.enumeration.ESeverityLevel;
 import com.brightway.brightway_dropout.exception.ResourceNotFoundException;
 import com.brightway.brightway_dropout.model.BehaviorIncident;
@@ -19,6 +18,7 @@ import com.brightway.brightway_dropout.util.JwtUtil;
 import lombok.RequiredArgsConstructor;
 
 import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
 import java.util.stream.Collectors;
@@ -99,5 +99,26 @@ public class BehaviorIncidentServiceImpl implements IBehaviorIncidentService {
     Teacher teacher = teacherRepository.findByUserId(userId)
             .orElseThrow(() -> new ResourceNotFoundException("User with ID " + userId + " not found"));
         return teacher.getId();
+    }
+
+    public StBehaviorIncidentOverviewDTO getStudentBehaviorIncidentOverview(UUID studentId) {
+        List<BehaviorIncident> incidents = behaviorIncidentRepository.findByStudentId(studentId);
+        int totalIncidents = incidents.size();
+        int totalMajorIncidents = 0;
+        int totalLowIncidents = 0;
+        List<StBehaviorIncidentDTO> incidentDTOs = new ArrayList<>();
+        for (BehaviorIncident i : incidents) {
+            if (i.getSeverity() == ESeverityLevel.HIGH || i.getSeverity() == ESeverityLevel.CRITICAL) {
+                totalMajorIncidents++;
+            } else if (i.getSeverity() == ESeverityLevel.LOW || i.getSeverity() == ESeverityLevel.MEDIUM) {
+                totalLowIncidents++;
+            }
+            incidentDTOs.add(new StBehaviorIncidentDTO(
+                i.getNotes(),
+                i.getType() != null ? i.getType().name() : null,
+                i.getSeverity() != null ? i.getSeverity().name() : null
+            ));
+        }
+        return new StBehaviorIncidentOverviewDTO(totalIncidents, totalMajorIncidents, totalLowIncidents, incidentDTOs);
     }
 }

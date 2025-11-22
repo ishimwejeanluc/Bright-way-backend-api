@@ -26,7 +26,7 @@ public class CourseController {
 
     private final ICourseService courseService;
 
-    @PostMapping(value = "/create", consumes = MediaType.APPLICATION_JSON_VALUE, produces = MediaType.APPLICATION_JSON_VALUE)
+    @PostMapping(value = "/create")
     @PreAuthorize("hasRole('PRINCIPAL')")
     public ResponseEntity<ApiResponse> createCourse(@Valid @RequestBody CreateCourseDTO createCourseDTO) {
         CreateCourseResponseDTO response = courseService.createCourse(createCourseDTO);
@@ -36,7 +36,7 @@ public class CourseController {
         );
     }
 
-    @GetMapping(value = "/{id}", produces = MediaType.APPLICATION_JSON_VALUE)
+    @GetMapping(value = "/{id}")
     @PreAuthorize("hasRole('PRINCIPAL') or hasRole('TEACHER')")
     public ResponseEntity<ApiResponse> getCourseById(@PathVariable UUID id) {
         CourseResponseDTO response = courseService.getCourseById(id);
@@ -56,7 +56,7 @@ public class CourseController {
         );
     }
 
-    @PutMapping(value = "/{id}", consumes = MediaType.APPLICATION_JSON_VALUE, produces = MediaType.APPLICATION_JSON_VALUE)
+    @PutMapping(value = "/{id}")
     @PreAuthorize("hasRole('PRINCIPAL')")
     public ResponseEntity<ApiResponse> updateCourse(@PathVariable UUID id, @Valid @RequestBody CreateCourseDTO updateCourseDTO) {
         CourseResponseDTO response = courseService.updateCourse(id, updateCourseDTO);
@@ -66,7 +66,7 @@ public class CourseController {
         );
     }
 
-    @DeleteMapping(value = "/{id}", produces = MediaType.APPLICATION_JSON_VALUE)
+    @DeleteMapping(value = "/{id}")
     @PreAuthorize("hasRole('PRINCIPAL')")
     public ResponseEntity<ApiResponse> deleteCourse(@PathVariable UUID id) {
         DeleteResponseDTO response = courseService.deleteCourse(id);
@@ -75,7 +75,7 @@ public class CourseController {
                 HttpStatus.OK
         );
     }
-    @GetMapping(value = "/stats/{schoolId}", produces = MediaType.APPLICATION_JSON_VALUE)
+    @GetMapping(value = "/stats/{schoolId}")
     @PreAuthorize("hasRole('PRINCIPAL')")
     public ResponseEntity<ApiResponse> getCourseStatsBySchool(@PathVariable UUID schoolId) {
         CourseStatsResponseDTO response = courseService.getCourseStatsBySchool(schoolId);

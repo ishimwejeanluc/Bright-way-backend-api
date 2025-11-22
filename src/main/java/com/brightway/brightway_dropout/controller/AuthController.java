@@ -23,7 +23,7 @@ public class AuthController {
     private final IAuthService authService;
 
 
-    @PostMapping(value = "/login",consumes = MediaType.APPLICATION_JSON_VALUE,produces = MediaType.APPLICATION_JSON_VALUE)
+    @PostMapping(value = "/login")
     public ResponseEntity<ApiResponse> login(@RequestBody @Valid  SignInDTO dto) {
         LoginResponseDTO loginResponseDTO = authService.signIn(dto);
         return new ResponseEntity<>(new ApiResponse(
@@ -33,7 +33,7 @@ public class AuthController {
         ), HttpStatus.OK);
     }
 
-    @PostMapping(value = "/register", consumes = MediaType.APPLICATION_JSON_VALUE, produces = MediaType.APPLICATION_JSON_VALUE)
+    @PostMapping(value = "/register")
     public ResponseEntity<ApiResponse> register(@RequestBody @Valid RegisterUserDTO dto) {
         RegisterUserResponseDTO registerUserResponseDTO = authService.registerUser(dto);
         return new ResponseEntity<>(new ApiResponse(

@@ -23,7 +23,7 @@ import java.util.UUID;
 public class SchoolController {
     private final ISchoolService schoolService;
 
-    @PutMapping(value = "/{id}", consumes = MediaType.APPLICATION_JSON_VALUE, produces = MediaType.APPLICATION_JSON_VALUE)
+    @PutMapping(value = "/{id}" )
     @PreAuthorize("hasRole('PRINCIPAL')")
     public ResponseEntity<ApiResponse> updateSchool(@PathVariable UUID id, @Valid @RequestBody CreateSchoolDTO updateSchoolDTO) {
     SchoolResponseDTO response = schoolService.updateSchool(id, updateSchoolDTO);
@@ -36,7 +36,7 @@ public class SchoolController {
     }
     
 
-    @PostMapping(value = "/create", consumes = MediaType.APPLICATION_JSON_VALUE, produces = MediaType.APPLICATION_JSON_VALUE)
+    @PostMapping(value = "/create")
     @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<ApiResponse> createSchool(@Valid @RequestBody CreateSchoolDTO createSchoolDTO) {
         CreateSchoolResponseDTO response = schoolService.createSchool(createSchoolDTO);
@@ -48,7 +48,7 @@ public class SchoolController {
         );
     }
 
-    @GetMapping(value = "/{id}", produces = MediaType.APPLICATION_JSON_VALUE)
+    @GetMapping(value = "/{id}" )
     @PreAuthorize("hasRole('PRINCIPAL') or hasRole('TEACHER')")
     public ResponseEntity<ApiResponse> getSchoolById(@PathVariable UUID id) {
         SchoolResponseDTO response = schoolService.getSchoolById(id);
@@ -60,7 +60,7 @@ public class SchoolController {
         );
     }
 
-    @GetMapping(produces = MediaType.APPLICATION_JSON_VALUE)
+    @GetMapping
     @PreAuthorize("hasRole('PRINCIPAL') or hasRole('TEACHER')")
     public ResponseEntity<ApiResponse> getAllSchools() {
         List<SchoolResponseDTO> response = schoolService.getAllSchools();
@@ -72,7 +72,7 @@ public class SchoolController {
         );
     }
 
-    @DeleteMapping(value = "/{id}", produces = MediaType.APPLICATION_JSON_VALUE)
+    @DeleteMapping(value = "/{id}" )
     @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<ApiResponse> deleteSchool(@PathVariable UUID id) {
         DeleteResponseDTO response = schoolService.deleteSchool(id);

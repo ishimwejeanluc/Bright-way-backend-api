@@ -3,6 +3,7 @@ package com.brightway.brightway_dropout.controller;
 import com.brightway.brightway_dropout.dto.student.request.CreateStudentWithParentRequestDTO;
 import com.brightway.brightway_dropout.dto.student.response.*;
 import com.brightway.brightway_dropout.service.IAttendanceService;
+import com.brightway.brightway_dropout.service.IBehaviorIncidentService;
 import com.brightway.brightway_dropout.service.ICourseService;
 import com.brightway.brightway_dropout.service.IStudentService;
 import com.brightway.brightway_dropout.util.ApiResponse;
@@ -25,17 +26,18 @@ public class StudentController {
     private final IStudentService studentService;
     private final IAttendanceService attendanceService;
     private final ICourseService courseService;
+    private final IBehaviorIncidentService behaviorIncidentService;
 
     @GetMapping("/{studentId}/course-overview")
     @PreAuthorize("hasRole('STUDENT') or hasRole('TEACHER') or hasRole('PRINCIPAL')")
-    public ResponseEntity<ApiResponse> getStudentCourseOverview(@PathVariable UUID studentId) {
+    public ResponseEntity<ApiResponse> getStudentCourseOverview(@PathVariable  UUID studentId) {
         List<StCourseOverviewDTO> response = courseService.getStudentCourseOverview(studentId);
         return new ResponseEntity<>(new ApiResponse(true, "Course overview loaded", response), HttpStatus.OK);
     }
     
     @GetMapping("/{studentId}/attendance-overview")
     @PreAuthorize("hasRole('STUDENT') or hasRole('TEACHER') or hasRole('PRINCIPAL')")
-    public ResponseEntity<ApiResponse> getStudentAttendanceOverview(@PathVariable UUID studentId) {
+    public ResponseEntity<ApiResponse> getStudentAttendanceOverview(@PathVariable  UUID studentId) {
         StAttendanceOverviewDTO response = attendanceService.getStudentAttendanceOverview(studentId);
         return new ResponseEntity<>(new ApiResponse(true, "Attendance overview loaded", response), 
         HttpStatus.OK);
@@ -53,7 +55,7 @@ public class StudentController {
 
     @GetMapping("/stats/by-school/{schoolId}")
     @PreAuthorize("hasRole('PRINCIPAL')")
-    public ResponseEntity<ApiResponse> getStudentStatsBySchool(@PathVariable UUID schoolId) {
+    public ResponseEntity<ApiResponse> getStudentStatsBySchool(@PathVariable  UUID schoolId) {
         StudentStatsResponseDTO response = studentService.getStudentStatsBySchool(schoolId);
         return new ResponseEntity<>(
             new ApiResponse(true, "Student stats retrieved successfully", response),
@@ -63,7 +65,7 @@ public class StudentController {
 
     @GetMapping("/by-course/{courseId}")
     @PreAuthorize("hasRole('TEACHER') or hasRole('PRINCIPAL')")
-    public ResponseEntity<ApiResponse> getStudentsByCourse(@PathVariable UUID courseId) {
+    public ResponseEntity<ApiResponse> getStudentsByCourse(@PathVariable  UUID courseId) {
         List<StudentDetailDTO> response = studentService.getStudentsByCourse(courseId);
         return new ResponseEntity<>(
             new ApiResponse(true, "Students retrieved successfully", response),
@@ -73,8 +75,18 @@ public class StudentController {
     
     @GetMapping("/dashboard/{studentId}")
     @PreAuthorize("hasRole('STUDENT') or hasRole('TEACHER')")
-    public ResponseEntity<ApiResponse> getStudentDashboard(@PathVariable UUID studentId) {
+    public ResponseEntity<ApiResponse> getStudentDashboard(@PathVariable  UUID studentId) {
         StudentDashboardDTO dashboard = studentService.getStudentDashboard(studentId);
         return ResponseEntity.ok(new ApiResponse(true, "Student dashboard data loaded", dashboard));
+    }
+
+    @GetMapping("/{studentId}/behavior-incident-overview")
+    @PreAuthorize("hasRole('STUDENT') or hasRole('TEACHER') or hasRole('PRINCIPAL')")
+    public ResponseEntity<ApiResponse> getStudentBehaviorIncidentOverview(@PathVariable UUID studentId) {
+        var response = behaviorIncidentService.getStudentBehaviorIncidentOverview(studentId);
+        return new ResponseEntity<>(
+            new ApiResponse(true, "Behavior incident overview loaded", response),
+            HttpStatus.OK
+        );
     }
 }

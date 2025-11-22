@@ -28,7 +28,7 @@ public class TeacherController {
 
     private final TeacherServiceImpl teacherService;
 
-    @PutMapping(value = "/{id}", consumes = MediaType.APPLICATION_JSON_VALUE, produces = MediaType.APPLICATION_JSON_VALUE)
+    @PutMapping(value = "/{id}" )
     @PreAuthorize("hasRole('PRINCIPAL')")
     public ResponseEntity<ApiResponse> updateTeacher(@PathVariable UUID id, @Valid @RequestBody CreateTeacherDTO updateTeacherDTO) {
         TeacherResponseDTO response = teacherService.updateTeacher(id, updateTeacherDTO);
@@ -41,7 +41,7 @@ public class TeacherController {
     }
    
 
-    @PostMapping(value = "/create", consumes = MediaType.APPLICATION_JSON_VALUE, produces = MediaType.APPLICATION_JSON_VALUE)
+    @PostMapping(value = "/create")
     @PreAuthorize("hasRole('PRINCIPAL')")
     public ResponseEntity<ApiResponse> createTeacher(@Valid @RequestBody CreateTeacherDTO createTeacherDTO) {
         CreateTeacherResponseDTO response = teacherService.createTeacher(createTeacherDTO);
@@ -53,7 +53,7 @@ public class TeacherController {
         );
     }
 
-    @GetMapping(value = "/{id}", produces = MediaType.APPLICATION_JSON_VALUE)
+    @GetMapping(value = "/{id}")
     @PreAuthorize("hasRole('PRINCIPAL') or hasRole('TEACHER')")
     public ResponseEntity<ApiResponse> getTeacherById(@PathVariable UUID id) {
         TeacherDetailDTO response = teacherService.getTeacherById(id);
@@ -65,7 +65,7 @@ public class TeacherController {
         );
     }
 
-        @GetMapping(produces = MediaType.APPLICATION_JSON_VALUE)
+        @GetMapping
         @PreAuthorize("hasRole('PRINCIPAL')")
     public ResponseEntity<ApiResponse> getAllTeachers() {
         List<TeacherResponseDTO> response = teacherService.getAllTeachers();
@@ -77,7 +77,7 @@ public class TeacherController {
         );
     }
 
-        @DeleteMapping(value = "/{id}", produces = MediaType.APPLICATION_JSON_VALUE)
+        @DeleteMapping(value = "/{id}")
         @PreAuthorize("hasRole('PRINCIPAL')")
     public ResponseEntity<ApiResponse> deleteTeacher(@PathVariable UUID id) {
         DeleteResponseDTO response = teacherService.deleteTeacher(id);
@@ -89,7 +89,7 @@ public class TeacherController {
         );
     }
 
-        @GetMapping(value = "/stats/by-school/{schoolId}", produces = MediaType.APPLICATION_JSON_VALUE)
+        @GetMapping(value = "/stats/by-school/{schoolId}")
         @PreAuthorize("hasRole('PRINCIPAL')")
         public ResponseEntity<ApiResponse> getTeacherStatsBySchool(@PathVariable UUID schoolId) {
                 TeacherStatsResponseDTO response = teacherService.getTeacherStatsBySchool(schoolId);
@@ -99,7 +99,7 @@ public class TeacherController {
                 );
         }
 
-        @GetMapping(value = "/dashboard/{teacherId}", produces = MediaType.APPLICATION_JSON_VALUE)
+        @GetMapping(value = "/dashboard/{teacherId}")
         @PreAuthorize("hasRole('TEACHER') ")
         public ResponseEntity<ApiResponse> getTeacherDashboardStats(@PathVariable UUID teacherId) {
                 var response = teacherService.getTeacherDashboardStats(teacherId);
@@ -108,7 +108,7 @@ public class TeacherController {
                         HttpStatus.OK
                 );
         }
-            @GetMapping(value = "/courses-stats/{teacherId}", produces = MediaType.APPLICATION_JSON_VALUE)
+            @GetMapping(value = "/courses-stats/{teacherId}")
         @PreAuthorize("hasRole('TEACHER') ")
         public ResponseEntity<ApiResponse> getTeacherCoursesStats(@PathVariable UUID teacherId) {
                 var response = teacherService.getTeacherCoursesStats(teacherId);
@@ -118,7 +118,7 @@ public class TeacherController {
                 );
         }
 
-         @GetMapping(value = "/attendance-stats/{teacherId}", produces = MediaType.APPLICATION_JSON_VALUE)
+         @GetMapping(value = "/attendance-stats/{teacherId}")
         @PreAuthorize("hasRole('TEACHER')")
         public ResponseEntity<ApiResponse> getTeacherAttendanceStats(@PathVariable UUID teacherId) {
                 TeacherAttendanceStatsDTO response = teacherService.getTeacherAttendanceStats(teacherId);
