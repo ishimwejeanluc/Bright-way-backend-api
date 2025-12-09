@@ -8,11 +8,9 @@ import com.brightway.brightway_dropout.dto.course.response.CourseResponseDTO;
 import com.brightway.brightway_dropout.dto.course.response.CourseStatsResponseDTO;
 import com.brightway.brightway_dropout.dto.common.response.DeleteResponseDTO;
 
-import java.time.LocalDate;
 import java.util.List;
 import java.util.Map;
 import java.util.LinkedHashMap;
-import java.util.HashMap;
 import java.util.ArrayList;
 import java.util.UUID;
 import com.brightway.brightway_dropout.dto.student.response.StCourseOverviewDTO;
@@ -28,7 +26,6 @@ import com.brightway.brightway_dropout.repository.IGradeRepository;
 import com.brightway.brightway_dropout.repository.ISchoolRepository;
 import com.brightway.brightway_dropout.util.JwtUtil;
 import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 

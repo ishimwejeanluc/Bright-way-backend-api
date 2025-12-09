@@ -7,7 +7,6 @@ import com.brightway.brightway_dropout.dto.behaviorIncident.response.*;
 import com.brightway.brightway_dropout.model.BehaviorIncident;
 import com.brightway.brightway_dropout.enumeration.ESeverityLevel;
 import com.brightway.brightway_dropout.exception.ResourceNotFoundException;
-import com.brightway.brightway_dropout.model.BehaviorIncident;
 import com.brightway.brightway_dropout.model.Student;
 import com.brightway.brightway_dropout.model.Teacher;
 import com.brightway.brightway_dropout.repository.IBehaviorIncidentRepository;

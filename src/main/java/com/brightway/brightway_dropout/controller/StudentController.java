@@ -89,4 +89,14 @@ public class StudentController {
             HttpStatus.OK
         );
     }
+
+    @GetMapping("/parent-dashboard/{parentId}")
+    @PreAuthorize("hasRole('PARENT') or hasRole('PRINCIPAL')")
+    public ResponseEntity<ApiResponse> getParentDashboard(@PathVariable UUID parentId) {
+        var response = studentService.getParentDashboard(parentId);
+        return new ResponseEntity<>(
+            new ApiResponse(true, "Parent dashboard loaded", response),
+            HttpStatus.OK
+        );
+    }
 }

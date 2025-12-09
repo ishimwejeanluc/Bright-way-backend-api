@@ -5,6 +5,7 @@ import com.brightway.brightway_dropout.dto.student.response.CreateStudentWithPar
 import com.brightway.brightway_dropout.dto.student.response.StudentDetailDTO;
 import com.brightway.brightway_dropout.dto.student.response.StudentStatsResponseDTO;
 import com.brightway.brightway_dropout.dto.student.response.StudentDashboardDTO;
+import com.brightway.brightway_dropout.dto.parent.response.ParentDashboardDTO;
 import java.util.List;
 import java.util.UUID;
 
@@ -13,4 +14,5 @@ public interface IStudentService {
     StudentStatsResponseDTO getStudentStatsBySchool(UUID schoolId);
     CreateStudentWithParentResponseDTO createStudentWithParent(CreateStudentWithParentRequestDTO dto);
     List<StudentDetailDTO> getStudentsByCourse(UUID courseId);
+    ParentDashboardDTO getParentDashboard(UUID parentId);
 }

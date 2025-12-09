@@ -1,10 +1,9 @@
 package com.brightway.brightway_dropout.security;
 
 import com.brightway.brightway_dropout.model.User;
-import com.brightway.brightway_dropout.model.Teacher;
-import com.brightway.brightway_dropout.model.School;
 import com.brightway.brightway_dropout.repository.ISchoolRepository;
 import com.brightway.brightway_dropout.repository.ITeacherRepository;
+import com.brightway.brightway_dropout.repository.IStudentRepository;
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.security.Keys;
 import org.springframework.beans.factory.annotation.Value;
@@ -27,10 +26,12 @@ public class JwtProvider {
 
     private final ISchoolRepository schoolRepository;
     private final ITeacherRepository teacherRepository;
+    private final IStudentRepository studentRepository;
 
-    public JwtProvider(ISchoolRepository schoolRepository, ITeacherRepository teacherRepository) {
+    public JwtProvider(ISchoolRepository schoolRepository, ITeacherRepository teacherRepository, IStudentRepository studentRepository) {
         this.schoolRepository = schoolRepository;
         this.teacherRepository = teacherRepository;
+        this.studentRepository = studentRepository;
     }
 
     public String generateToken(User user) {
@@ -71,6 +72,20 @@ public class JwtProvider {
                             .toList();
                         claims.put("courses", courses);
                     }
+                });
+        }
+
+        // Add student-specific claims for student role
+        if (user.getRole() != null && user.getRole().toString().equalsIgnoreCase("STUDENT")) {
+            studentRepository.findByUserIdWithSchool(user.getId())
+                .ifPresent(student -> {
+                    // Add school info
+                    if (student.getSchool() != null) {
+                        claims.put("schoolId", student.getSchool().getId());
+                        claims.put("schoolName", student.getSchool().getName());
+                    }
+                    // Add student ID
+                    claims.put("studentId", student.getId());
                 });
         }
 

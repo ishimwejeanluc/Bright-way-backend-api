@@ -1,4 +1,8 @@
 package com.brightway.brightway_dropout.service;
+
+import java.util.Map;
+import java.util.HashMap;
+import java.util.Collections;
 import com.brightway.brightway_dropout.enumeration.EStudentStatus;
 import com.brightway.brightway_dropout.enumeration.EUserRole;
 import com.brightway.brightway_dropout.exception.ResourceAlreadyExistsException;
@@ -42,6 +46,12 @@ import com.brightway.brightway_dropout.dto.student.response.StudentDashboardDTO;
 import com.brightway.brightway_dropout.dto.grade.response.StudentPerformanceTrendDTO;
 import com.brightway.brightway_dropout.dto.attendance.response.AttendanceStudentOverviewDTO;
 import java.util.ArrayList;
+import com.brightway.brightway_dropout.dto.parent.response.ParentDashboardDTO;
+import com.brightway.brightway_dropout.dto.parent.response.ParentChildSummaryDTO;
+import com.brightway.brightway_dropout.dto.parent.response.WeekAttendanceDTO;
+import com.brightway.brightway_dropout.dto.parent.response.ChildBehaviorDTO;
+import com.brightway.brightway_dropout.model.Attendance;
+import com.brightway.brightway_dropout.model.BehaviorIncident;
 
 @Service
 @RequiredArgsConstructor
@@ -243,5 +253,70 @@ public class StudentServiceImpl implements IStudentService {
                     enrollment.getStudent().getUser().getName()
                 ))
                 .collect(Collectors.toList());
+    }
+
+    @Override
+    @Transactional
+    public ParentDashboardDTO getParentDashboard(UUID parentId) {
+        List<Student> children = studentRepository.findByParentId(parentId);
+        List<ParentChildSummaryDTO> childSummaries = new ArrayList<>();
+        for (Student child : children) {
+            String name = child.getUser() != null ? child.getUser().getName() : null;
+            double overallAttendance = calculateOverallAttendance(child);
+            double gpa = getGpaFromGrades(child);
+            double todayAttendance = calculateTodayAttendance(child);
+            int behaviorIncidents = child.getBehaviorIncidents() != null ? child.getBehaviorIncidents().size() : 0;
+            List<WeekAttendanceDTO> attendanceTrends = getAttendanceTrends(child);
+            List<ChildBehaviorDTO> behaviorDetails = getBehaviorDetails(child);
+            childSummaries.add(new ParentChildSummaryDTO(
+                name,
+                overallAttendance,
+                gpa,
+                todayAttendance,
+                behaviorIncidents,
+                attendanceTrends,
+                behaviorDetails
+            ));
+        }
+        return new ParentDashboardDTO(children.size(), childSummaries);
+    }
+
+    private double calculateOverallAttendance(Student student) {
+        List<Attendance> records = student.getAttendanceRecords();
+        if (records == null || records.isEmpty()) return 0.0;
+        long present = records.stream().filter(a -> a.getStatus() == EAttendanceStatus.PRESENT).count();
+        return (present * 100.0) / records.size();
+    }
+
+    private List<WeekAttendanceDTO> getAttendanceTrends(Student student) {
+        List<WeekAttendanceDTO> trends = new ArrayList<>();
+        List<Attendance> records = student.getAttendanceRecords();
+        if (records == null || records.isEmpty()) return trends;
+        // Group by week (Monday-Sunday)
+        Map<Integer, List<Attendance>> weekMap = new HashMap<>();
+        for (Attendance a : records) {
+            if (a.getDate() != null) {
+                int weekOfYear = a.getDate().get(java.time.temporal.IsoFields.WEEK_OF_WEEK_BASED_YEAR);
+                weekMap.computeIfAbsent(weekOfYear, k -> new ArrayList<>()).add(a);
+            }
+        }
+        for (Map.Entry<Integer, List<Attendance>> entry : weekMap.entrySet()) {
+            List<Attendance> weekRecords = entry.getValue();
+            long present = weekRecords.stream().filter(a -> a.getStatus() == EAttendanceStatus.PRESENT).count();
+            double weeklyAverage = weekRecords.isEmpty() ? 0.0 : (present * 100.0) / weekRecords.size();
+            trends.add(new WeekAttendanceDTO("Week " + entry.getKey(), weeklyAverage));
+        }
+        return trends;
+    }
+
+    private List<ChildBehaviorDTO> getBehaviorDetails(Student student) {
+        List<ChildBehaviorDTO> details = new ArrayList<>();
+        List<BehaviorIncident> incidents = student.getBehaviorIncidents();
+        if (incidents != null) {
+            for (BehaviorIncident i : incidents) {
+                details.add(new ChildBehaviorDTO(i.getNotes(), i.getType() != null ? i.getType().name() : null));
+            }
+        }
+        return details;
     }
 }
