@@ -29,14 +29,14 @@ public class StudentController {
     private final IBehaviorIncidentService behaviorIncidentService;
 
     @GetMapping("/{studentId}/course-overview")
-    @PreAuthorize("hasRole('STUDENT') or hasRole('TEACHER') or hasRole('PRINCIPAL')")
+    @PreAuthorize("hasRole('STUDENT') or hasRole('PARENT') or hasRole('PRINCIPAL')")
     public ResponseEntity<ApiResponse> getStudentCourseOverview(@PathVariable  UUID studentId) {
         List<StCourseOverviewDTO> response = courseService.getStudentCourseOverview(studentId);
         return new ResponseEntity<>(new ApiResponse(true, "Course overview loaded", response), HttpStatus.OK);
     }
     
     @GetMapping("/{studentId}/attendance-overview")
-    @PreAuthorize("hasRole('STUDENT') or hasRole('TEACHER') or hasRole('PRINCIPAL')")
+    @PreAuthorize("hasRole('STUDENT') or hasRole('PARENT') or hasRole('PRINCIPAL')")
     public ResponseEntity<ApiResponse> getStudentAttendanceOverview(@PathVariable  UUID studentId) {
         StAttendanceOverviewDTO response = attendanceService.getStudentAttendanceOverview(studentId);
         return new ResponseEntity<>(new ApiResponse(true, "Attendance overview loaded", response), 

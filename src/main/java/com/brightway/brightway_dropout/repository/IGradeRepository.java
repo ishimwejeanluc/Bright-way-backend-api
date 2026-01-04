@@ -1,5 +1,3 @@
-   
-
 package com.brightway.brightway_dropout.repository;
 
 import com.brightway.brightway_dropout.model.Grade;
@@ -90,4 +88,8 @@ public interface IGradeRepository extends JpaRepository<Grade, UUID> {
         ORDER BY g.grade_type
         """, nativeQuery = true)
     List<Object[]> findPerformanceTrendByGradeTypeForStudent(@Param("studentId") UUID studentId);
+
+    // Fetch all Grade entities for a student (for ML features)
+    @Query("SELECT g FROM Grade g JOIN g.enrollment e WHERE e.student.id = :studentId")
+    List<Grade> findAllByStudentId(@Param("studentId") UUID studentId);
 }

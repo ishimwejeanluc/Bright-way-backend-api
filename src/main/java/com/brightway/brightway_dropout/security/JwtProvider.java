@@ -1,9 +1,11 @@
 package com.brightway.brightway_dropout.security;
 
+import com.brightway.brightway_dropout.model.Student;
 import com.brightway.brightway_dropout.model.User;
 import com.brightway.brightway_dropout.repository.ISchoolRepository;
 import com.brightway.brightway_dropout.repository.ITeacherRepository;
 import com.brightway.brightway_dropout.repository.IStudentRepository;
+import com.brightway.brightway_dropout.repository.IParentRepository;
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.security.Keys;
 import org.springframework.beans.factory.annotation.Value;
@@ -27,12 +29,15 @@ public class JwtProvider {
     private final ISchoolRepository schoolRepository;
     private final ITeacherRepository teacherRepository;
     private final IStudentRepository studentRepository;
+    private final IParentRepository parentRepository;
 
-    public JwtProvider(ISchoolRepository schoolRepository, ITeacherRepository teacherRepository, IStudentRepository studentRepository) {
+    public JwtProvider(ISchoolRepository schoolRepository, ITeacherRepository teacherRepository, IStudentRepository studentRepository, IParentRepository parentRepository) {
         this.schoolRepository = schoolRepository;
         this.teacherRepository = teacherRepository;
         this.studentRepository = studentRepository;
+        this.parentRepository = parentRepository;
     }
+
 
     public String generateToken(User user) {
         Map<String, Object> claims = new HashMap<>();
@@ -87,6 +92,22 @@ public class JwtProvider {
                     // Add student ID
                     claims.put("studentId", student.getId());
                 });
+        }
+
+        // Add parent-specific claims for parent role
+        if (user.getRole() != null && user.getRole().toString().equalsIgnoreCase("PARENT")) {
+            parentRepository.findByUserId(user.getId()).ifPresent(parent -> {
+                claims.put("parentId", parent.getId());
+                // Get all students for this parent
+                List<Student> children = studentRepository.findByParentId(parent.getId());
+                List<String> studentIds = children.stream().map(s -> s.getId().toString()).toList();
+                claims.put("studentIds", studentIds);
+                // If all children are in the same school, add schoolId and schoolName
+                if (!children.isEmpty() && children.get(0).getSchool() != null) {
+                    claims.put("schoolId", children.get(0).getSchool().getId());
+                    claims.put("schoolName", children.get(0).getSchool().getName());
+                }
+            });
         }
 
         SecretKey key = Keys.hmacShaKeyFor(jwtSecret.getBytes(StandardCharsets.UTF_8));

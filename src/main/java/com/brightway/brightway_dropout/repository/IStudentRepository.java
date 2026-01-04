@@ -23,5 +23,7 @@ public interface IStudentRepository extends JpaRepository<Student, UUID> {
     Optional<Student> findByUserIdWithSchool(@Param("userId") UUID userId);
 
     List<Student> findByParentId(UUID parentId);
-   
+
+
+    List<Student> findAllByActive(boolean active);
 }

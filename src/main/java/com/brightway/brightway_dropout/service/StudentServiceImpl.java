@@ -1,6 +1,7 @@
 package com.brightway.brightway_dropout.service;
 
 import java.util.Map;
+import java.util.Optional;
 import java.util.HashMap;
 import java.util.Collections;
 import com.brightway.brightway_dropout.enumeration.EStudentStatus;
@@ -77,7 +78,8 @@ public class StudentServiceImpl implements IStudentService {
         // Behavior Incidents
         Integer behaviorIncidents = behaviorIncidentRepository.countByStudentId(studentId);
     // Latest Dropout Prediction
-    DropoutPrediction latestPrediction = dropoutPredictionRepository.findTopByStudentIdOrderByPredictedAtDesc(studentId);
+    DropoutPrediction latestPrediction = dropoutPredictionRepository.findTopByStudentIdOrderByPredictedAtDesc(studentId)
+            .orElseThrow(()-> new ResourceNotFoundException("No prediction for this student"));
     String riskLevel = latestPrediction != null ? latestPrediction.getRiskLevel().name() : null;
     Float probabilityPercent = latestPrediction != null ? latestPrediction.getProbability() * 100 : null;
 

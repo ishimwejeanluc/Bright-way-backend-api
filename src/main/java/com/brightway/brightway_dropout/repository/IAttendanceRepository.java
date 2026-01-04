@@ -1,6 +1,6 @@
-    
 package com.brightway.brightway_dropout.repository;
 
+import java.time.LocalDateTime;
 import java.time.LocalDate;
 import java.util.List;
 import java.util.Optional;
@@ -110,4 +110,7 @@ public interface IAttendanceRepository extends JpaRepository<Attendance, UUID> {
         ORDER BY a.date
         """, nativeQuery = true)
     List<Object[]> findAttendanceOverviewByDayForStudent(@Param("studentId") UUID studentId);
+
+    List<Attendance> findByStudent_IdAndDateAfter(UUID studentId, LocalDate date);
+    List<Attendance> findByStudent_IdAndCreatedAtAfter(UUID studentId , LocalDateTime date);
 }

@@ -21,7 +21,13 @@ public class DropoutPrediction extends AbstractBaseUtility {
 
     @Enumerated(EnumType.STRING)
     private ERiskLevel riskLevel;
+    
+    private String topFactor;  // The most significant factor (e.g., "Low Attendance Rate")
+    
+    @Column(length = 500)
+    private String factorMessage;  // Detailed message about the factor
+    
+    private String status;  // ACTIVE, RESOLVED, MONITORING
+    
     private LocalDateTime predictedAt;
-
-
 }

@@ -1,4 +1,3 @@
-   
 package com.brightway.brightway_dropout.repository;
 
 import com.brightway.brightway_dropout.model.BehaviorIncident;
@@ -6,6 +5,7 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Set;
 import java.util.UUID;
@@ -26,4 +26,6 @@ public interface IBehaviorIncidentRepository extends JpaRepository<BehaviorIncid
     Integer countByStudentId(@Param("studentId") UUID studentId);
 
     List<BehaviorIncident> findByStudentId(UUID studentId);
+
+    List<BehaviorIncident> findByStudent_IdAndCreatedAtAfter(UUID studentId, LocalDateTime createdAt);
 }
