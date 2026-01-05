@@ -13,6 +13,8 @@ import org.springframework.data.repository.query.Param;
 import com.brightway.brightway_dropout.model.Attendance;
 
 public interface IAttendanceRepository extends JpaRepository<Attendance, UUID> {
+    @Query("SELECT COUNT(a) FROM Attendance a WHERE a.student.school.id = :schoolId AND a.date = :date AND a.status = 'PRESENT'")
+    int countPresentBySchoolIdAndDate(@Param("schoolId") UUID schoolId, @Param("date") LocalDate date);
     // Find the most missed class for a student (by absence count)
     @Query(value = """
         SELECT c.name, COUNT(*) AS total_missed

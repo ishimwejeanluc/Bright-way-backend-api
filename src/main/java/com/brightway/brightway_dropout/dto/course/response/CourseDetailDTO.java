@@ -14,4 +14,5 @@ public class CourseDetailDTO {
     private String teacherName;
     private boolean active;
     private int enrollmentCount;
+    private int atRiskStudents;
 }

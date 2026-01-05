@@ -14,6 +14,8 @@ import com.brightway.brightway_dropout.model.Student;
 
 @Repository
 public interface IStudentRepository extends JpaRepository<Student, UUID> {
+
+    long countBySchoolId(UUID schoolId);
     List<Student> findBySchoolId(UUID schoolId);
 
     @Query("SELECT DISTINCT s FROM Student s LEFT JOIN FETCH s.enrollments WHERE s.school.id = :schoolId")

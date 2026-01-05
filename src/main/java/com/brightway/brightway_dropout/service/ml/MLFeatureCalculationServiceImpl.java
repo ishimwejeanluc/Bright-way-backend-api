@@ -94,7 +94,6 @@ public class MLFeatureCalculationServiceImpl implements IMLFeatureCalculationSer
                 .collect(Collectors.toList());
     }
     
-    // ===== HELPER METHODS =====
     
     private List<Attendance> getRecentAttendance(Student student, LocalDateTime startDate) {
         // Query attendance for last 2 weeks using repository method
@@ -156,9 +155,16 @@ public class MLFeatureCalculationServiceImpl implements IMLFeatureCalculationSer
     }
     
     private int countFailingCourses(List<Grade> grades) {
+        // Failing course: average mark for a course is below 50% (i.e., <10 out of 20)
+        double maxMarks = 20.0;
+        double threshold = maxMarks * 0.5;
+        // Group grades by course (via enrollment)
         return (int) grades.stream()
-                .filter(g -> g.getMarks() < 50.0f)
-                .count();
+            .collect(Collectors.groupingBy(g -> g.getEnrollment().getCourse()))
+            .values().stream()
+            .mapToDouble(courseGrades -> courseGrades.stream().mapToDouble(Grade::getMarks).average().orElse(0.0))
+            .filter(avg -> avg < threshold)
+            .count();
     }
     
     private double findLowestGrade(List<Grade> grades) {

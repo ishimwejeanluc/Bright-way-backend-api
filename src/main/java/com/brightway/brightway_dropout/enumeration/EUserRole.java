@@ -5,5 +5,6 @@ public enum EUserRole {
     STUDENT,
     TEACHER,
     PRINCIPAL,
-    PARENT
+    PARENT,
+    GOVERNMENT
 }

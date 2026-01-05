@@ -14,12 +14,15 @@ import java.util.LinkedHashMap;
 import java.util.ArrayList;
 import java.util.UUID;
 import com.brightway.brightway_dropout.dto.student.response.StCourseOverviewDTO;
+import com.brightway.brightway_dropout.enumeration.ERiskLevel;
 import com.brightway.brightway_dropout.dto.student.response.StCourseMarkDTO;
 
 import com.brightway.brightway_dropout.exception.ResourceNotFoundException;
 import com.brightway.brightway_dropout.model.Course;
+import com.brightway.brightway_dropout.model.DropoutPrediction;
 import com.brightway.brightway_dropout.model.Enrollment;
 import com.brightway.brightway_dropout.model.School;
+import com.brightway.brightway_dropout.model.Student;
 import com.brightway.brightway_dropout.repository.ICourseRepository;
 import com.brightway.brightway_dropout.repository.IEnrollmentRepository;
 import com.brightway.brightway_dropout.repository.IGradeRepository;
@@ -153,14 +156,20 @@ public class CourseServiceImpl implements ICourseService {
         int totalActiveCourses = (int) courses.stream().filter(Course::isActive).count();
         int totalInactiveCourses = totalCourses - totalActiveCourses;
         List<CourseDetailDTO> courseDetails = courses.stream()
-            .map(course -> new CourseDetailDTO(
-                course.getName(),
-                course.getGrade(),
-                course.getCredits(),
-                course.getTeacher() != null ? course.getTeacher().getUser().getName() : null,
-                course.isActive(),
-                course.getEnrollments() != null ? course.getEnrollments().size() : 0
-            ))
+            .map(course -> {
+                int enrollmentCount = course.getEnrollments() != null ? course.getEnrollments().size() : 0;
+                // Count at-risk students using repository method to avoid lazy loading
+                int atRiskStudents = courseRepository.countAtRiskStudentsByCourseId(course.getId());
+                return new CourseDetailDTO(
+                    course.getName(),
+                    course.getGrade(),
+                    course.getCredits(),
+                    course.getTeacher() != null ? course.getTeacher().getUser().getName() : null,
+                    course.isActive(),
+                    enrollmentCount,
+                    atRiskStudents
+                );
+            })
             .toList();
         return new CourseStatsResponseDTO(totalCourses, totalActiveCourses, totalInactiveCourses, courseDetails);
     }
