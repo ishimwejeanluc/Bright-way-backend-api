@@ -92,4 +92,14 @@ public interface IGradeRepository extends JpaRepository<Grade, UUID> {
     // Fetch all Grade entities for a student (for ML features)
     @Query("SELECT g FROM Grade g JOIN g.enrollment e WHERE e.student.id = :studentId")
     List<Grade> findAllByStudentId(@Param("studentId") UUID studentId);
+    
+    // Government dashboard query - calculate average performance (GPA) for a school
+    @Query(value = """
+        SELECT ROUND(AVG(g.marks)::numeric, 1)
+        FROM grade g
+        JOIN enrollment e ON g.enrollment_id = e.id
+        JOIN student s ON e.student_id = s.id
+        WHERE s.school_id = :schoolId
+        """, nativeQuery = true)
+    Double calculateAveragePerformanceForSchool(@Param("schoolId") UUID schoolId);
 }

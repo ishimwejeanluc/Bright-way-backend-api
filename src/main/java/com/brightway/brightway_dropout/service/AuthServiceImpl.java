@@ -68,7 +68,7 @@ public class AuthServiceImpl implements IAuthService {
             newUser.setEmail(registerUserDTO.getEmail());
             newUser.setPassword(passwordEncoder.encode(registerUserDTO.getPassword()));
             newUser.setPhone(registerUserDTO.getPhone());
-            newUser.setRole(EUserRole.ADMIN);
+            newUser.setRole(EUserRole.GOVERNMENT);
 
             // Save user
             User savedUser = authRepository.save(newUser);

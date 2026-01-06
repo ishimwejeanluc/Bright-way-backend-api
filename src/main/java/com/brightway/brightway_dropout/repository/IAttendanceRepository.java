@@ -115,4 +115,37 @@ public interface IAttendanceRepository extends JpaRepository<Attendance, UUID> {
 
     List<Attendance> findByStudent_IdAndDateAfter(UUID studentId, LocalDate date);
     List<Attendance> findByStudent_IdAndCreatedAtAfter(UUID studentId , LocalDateTime date);
+    
+    // Government dashboard queries - calculate average attendance across all schools
+    @Query(value = """
+        SELECT ROUND((COUNT(CASE WHEN a.status = 'PRESENT' THEN 1 END) * 100.0) / NULLIF(COUNT(*), 0), 1)
+        FROM attendance a
+        JOIN student s ON a.student_id = s.id
+        WHERE a.date >= :startDate AND a.date <= :endDate
+        """, nativeQuery = true)
+    Double calculateAverageAttendanceForAllSchools(@Param("startDate") LocalDate startDate, 
+                                                    @Param("endDate") LocalDate endDate);
+    
+    // Calculate average attendance for specific schools
+    @Query(value = """
+        SELECT ROUND((COUNT(CASE WHEN a.status = 'PRESENT' THEN 1 END) * 100.0) / NULLIF(COUNT(*), 0), 1)
+        FROM attendance a
+        JOIN student s ON a.student_id = s.id
+        WHERE a.date >= :startDate AND a.date <= :endDate
+        AND s.school_id IN :schoolIds
+        """, nativeQuery = true)
+    Double calculateAverageAttendanceForSpecificSchools(@Param("startDate") LocalDate startDate, 
+                                                         @Param("endDate") LocalDate endDate,
+                                                         @Param("schoolIds") List<UUID> schoolIds);
+    
+    // Calculate attendance for a specific school in date range
+    @Query(value = """
+        SELECT ROUND((COUNT(CASE WHEN a.status = 'PRESENT' THEN 1 END) * 100.0) / NULLIF(COUNT(*), 0), 1)
+        FROM attendance a
+        JOIN student s ON a.student_id = s.id
+        WHERE a.date >= :startDate AND a.date <= :endDate AND s.school_id = :schoolId
+        """, nativeQuery = true)
+    Double calculateAttendanceForSchool(@Param("startDate") LocalDate startDate,
+                                         @Param("endDate") LocalDate endDate,
+                                         @Param("schoolId") UUID schoolId);
 }
