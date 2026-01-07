@@ -36,7 +36,7 @@ public class SchoolController {
     
 
     @PostMapping(value = "/create")
-    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize("hasRole('ADMIN') or hasRole('GOVERNMENT')")
     public ResponseEntity<ApiResponse> createSchool(@Valid @RequestBody CreateSchoolDTO createSchoolDTO) {
         CreateSchoolResponseDTO response = schoolService.createSchool(createSchoolDTO);
         return new ResponseEntity<>(

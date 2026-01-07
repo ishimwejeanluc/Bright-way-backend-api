@@ -32,6 +32,22 @@ public interface IDropoutPredictionRepository extends JpaRepository<DropoutPredi
         """, nativeQuery = true)
     Integer countTotalAtRiskStudents();
     
+    // Count at-risk students for a specific school
+    @Query(value = """
+        SELECT COUNT(DISTINCT st.id)
+        FROM student st
+        LEFT JOIN LATERAL (
+            SELECT risk_level
+            FROM dropout_predictions
+            WHERE student_id = st.id
+            ORDER BY created_at DESC
+            LIMIT 1
+        ) dp ON true
+        WHERE dp.risk_level IN ('HIGH', 'CRITICAL')
+        AND st.school_id = :schoolId
+        """, nativeQuery = true)
+    Integer countAtRiskStudentsBySchoolId(@Param("schoolId") UUID schoolId);
+    
     // Government dashboard queries - calculate dropout rate based on student status
     @Query(value = """
         SELECT ROUND((COUNT(CASE WHEN s.status = 'DROPPED' THEN 1 END) * 100.0) / NULLIF(COUNT(s.id), 0), 1)

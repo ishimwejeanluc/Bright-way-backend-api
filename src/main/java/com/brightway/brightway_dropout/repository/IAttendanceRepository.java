@@ -148,4 +148,13 @@ public interface IAttendanceRepository extends JpaRepository<Attendance, UUID> {
     Double calculateAttendanceForSchool(@Param("startDate") LocalDate startDate,
                                          @Param("endDate") LocalDate endDate,
                                          @Param("schoolId") UUID schoolId);
+    
+    // Calculate average attendance for a specific school (all time)
+    @Query(value = """
+        SELECT ROUND((COUNT(CASE WHEN a.status = 'PRESENT' THEN 1 END) * 100.0) / NULLIF(COUNT(*), 0), 1)
+        FROM attendance a
+        JOIN student s ON a.student_id = s.id
+        WHERE s.school_id = :schoolId
+        """, nativeQuery = true)
+    Double calculateAverageAttendanceForSchoolAllTime(@Param("schoolId") UUID schoolId);
 }

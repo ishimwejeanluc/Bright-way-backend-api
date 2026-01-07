@@ -26,6 +26,19 @@ public interface ITeacherRepository extends JpaRepository<Teacher, UUID> {
     @Query("SELECT t FROM Teacher t LEFT JOIN FETCH t.courses WHERE t.user.id = :userId")
     Optional<Teacher> findByUserIdWithCourses(@Param("userId") UUID userId);
     
-
-
+    // Get teacher details for government dashboard
+    @Query(value = """
+        SELECT 
+            t.id as teacher_id,
+            u.name as teacher_name,
+            t.specialization,
+            COUNT(DISTINCT c.id) as courses_teaching
+        FROM teacher t
+        JOIN users u ON t.user_id = u.id
+        LEFT JOIN course c ON t.id = c.teacher_id
+        WHERE t.school_id = :schoolId
+        GROUP BY t.id, u.name, t.specialization
+        ORDER BY u.name
+        """, nativeQuery = true)
+    List<Object[]> findTeacherDetailsForGovernment(@Param("schoolId") UUID schoolId);
 }

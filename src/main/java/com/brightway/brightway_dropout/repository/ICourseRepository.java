@@ -36,4 +36,22 @@ public interface ICourseRepository extends JpaRepository<Course, UUID> {
         )
         """, nativeQuery = true)
     int countAtRiskStudentsByCourseId(@Param("courseId") UUID courseId);
+    
+    // Get course names taught by a teacher
+    @Query(value = """
+        SELECT c.name
+        FROM course c
+        WHERE c.teacher_id = :teacherId
+        ORDER BY c.name
+        """, nativeQuery = true)
+    List<String> findCourseNamesByTeacherId(@Param("teacherId") UUID teacherId);
+    
+    // Count total students for a teacher across all their courses
+    @Query(value = """
+        SELECT COUNT(DISTINCT e.student_id)
+        FROM enrollment e
+        JOIN course c ON e.course_id = c.id
+        WHERE c.teacher_id = :teacherId
+        """, nativeQuery = true)
+    Integer countStudentsByTeacherId(@Param("teacherId") UUID teacherId);
 }

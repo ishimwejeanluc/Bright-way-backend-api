@@ -43,4 +43,54 @@ public class GovernmentController {
             HttpStatus.OK
         );
     }
+
+    @GetMapping("/schools/{schoolId}/overview")
+    @PreAuthorize("hasRole('GOVERNMENT')")
+    public ResponseEntity<ApiResponse> getSchoolProfileOverview(@PathVariable UUID schoolId) {
+        var response = governmentService.getSchoolProfileOverview(schoolId);
+        return new ResponseEntity<>(
+            new ApiResponse(true, "School profile overview retrieved successfully", response),
+            HttpStatus.OK
+        );
+    }
+
+    @GetMapping("/students-overview")
+    @PreAuthorize("hasRole('GOVERNMENT')")
+    public ResponseEntity<ApiResponse> getStudentOverview() {
+        var response = governmentService.getStudentOverview();
+        return new ResponseEntity<>(
+            new ApiResponse(true, "Student overview retrieved successfully", response),
+            HttpStatus.OK
+        );
+    }
+
+    @GetMapping("/schools/{schoolId}/students")
+    @PreAuthorize("hasRole('GOVERNMENT')")
+    public ResponseEntity<ApiResponse> getStudentDetails(@PathVariable UUID schoolId) {
+        var response = governmentService.getStudentDetails(schoolId);
+        return new ResponseEntity<>(
+            new ApiResponse(true, "Student details retrieved successfully", response),
+            HttpStatus.OK
+        );
+    }
+
+    @GetMapping("/teachers-overview")
+    @PreAuthorize("hasRole('GOVERNMENT')")
+    public ResponseEntity<ApiResponse> getTeacherOverview() {
+        var response = governmentService.getTeacherOverview();
+        return new ResponseEntity<>(
+            new ApiResponse(true, "Teacher overview retrieved successfully", response),
+            HttpStatus.OK
+        );
+    }
+
+    @GetMapping("/schools/{schoolId}/teachers")
+    @PreAuthorize("hasRole('GOVERNMENT')")
+    public ResponseEntity<ApiResponse> getTeacherDetails(@PathVariable UUID schoolId) {
+        var response = governmentService.getTeacherDetails(schoolId);
+        return new ResponseEntity<>(
+            new ApiResponse(true, "Teacher details retrieved successfully", response),
+            HttpStatus.OK
+        );
+    }
 }

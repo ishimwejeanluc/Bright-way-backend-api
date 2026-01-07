@@ -1,6 +1,7 @@
 package com.brightway.brightway_dropout.service;
 
 import com.brightway.brightway_dropout.dto.government.response.*;
+import com.brightway.brightway_dropout.model.DropoutPrediction;
 import com.brightway.brightway_dropout.model.School;
 import com.brightway.brightway_dropout.repository.*;
 import lombok.RequiredArgsConstructor;
@@ -8,6 +9,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
+import java.time.Period;
 import java.util.*;
 import java.util.stream.Collectors;
 
@@ -21,6 +23,9 @@ public class GovernmentServiceImpl implements IGovernmentService {
     private final IDropoutPredictionRepository dropoutPredictionRepository;
     private final IGradeRepository gradeRepository;
     private final ISchoolRepository schoolRepository;
+    private final IBehaviorIncidentRepository behaviorIncidentRepository;
+    private final IEnrollmentRepository enrollmentRepository;
+    private final ICourseRepository courseRepository;
 
     @Override
     @Transactional(readOnly = true)
@@ -177,5 +182,217 @@ public class GovernmentServiceImpl implements IGovernmentService {
             totalAtRiskStudents,
             schools
         );
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public GovSchoolProfileOverviewDTO getSchoolProfileOverview(UUID schoolId) {
+        // Get school basic info and aggregated data using native query
+        List<Object[]> result = schoolRepository.findSchoolProfileOverview(schoolId);
+        
+        if (result == null || result.isEmpty()) {
+            throw new RuntimeException("School not found with ID: " + schoolId);
+        }
+        
+        Object[] schoolData = result.get(0);
+        
+        String schoolName = (String) schoolData[0];
+        String location = (String) schoolData[1];
+        String principalName = (String) schoolData[2];
+        String description = (String) schoolData[3];
+        int totalEnrollment = ((Number) schoolData[4]).intValue();
+        int teachingStaff = ((Number) schoolData[5]).intValue();
+        double dropoutRate = ((Number) schoolData[6]).doubleValue();
+        
+        // Calculate average attendance using existing native query
+        Double avgAttendance = attendanceRepository.calculateAverageAttendanceForSchoolAllTime(schoolId);
+        if (avgAttendance == null) {
+            avgAttendance = 0.0;
+        }
+        
+        // Calculate average grade using existing native query
+        Double avgGrade = gradeRepository.calculateAveragePerformanceForSchool(schoolId);
+        if (avgGrade == null) {
+            avgGrade = 0.0;
+        }
+        
+        // Count behavior incidents using native query
+        Integer behaviorIncidents = behaviorIncidentRepository.countBySchoolId(schoolId);
+        if (behaviorIncidents == null) {
+            behaviorIncidents = 0;
+        }
+        
+        // Count at-risk students using native query
+        Integer atRiskStudents = dropoutPredictionRepository.countAtRiskStudentsBySchoolId(schoolId);
+        if (atRiskStudents == null) {
+            atRiskStudents = 0;
+        }
+        
+        return new GovSchoolProfileOverviewDTO(
+            schoolName,
+            location,
+            principalName,
+            description,
+            totalEnrollment,
+            teachingStaff,
+            dropoutRate,
+            avgAttendance,
+            avgGrade,
+            behaviorIncidents,
+            atRiskStudents
+        );
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public GovStudentOverviewResponseDTO getStudentOverview() {
+        // Get student overview grouped by schools using native query
+        List<Object[]> schoolData = schoolRepository.findStudentOverviewBySchools();
+        
+        List<GovStudentOverviewItemDTO> schools = schoolData.stream()
+            .map(row -> new GovStudentOverviewItemDTO(
+                (UUID) row[0],              // school_id
+                (String) row[1],            // school_name
+                (String) row[2],            // region
+                ((Number) row[3]).intValue() // number_of_students
+            ))
+            .collect(Collectors.toList());
+        
+        return new GovStudentOverviewResponseDTO(schools);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public GovStudentDetailsResponseDTO getStudentDetails(UUID schoolId) {
+        // Get student basic data using native query
+        List<Object[]> studentData = studentRepository.findStudentDetailsForGovernment(schoolId);
+        
+        if (studentData.isEmpty()) {
+            return new GovStudentDetailsResponseDTO(0.0, 0.0, 0, new ArrayList<>());
+        }
+        
+        List<GovStudentDetailItemDTO> students = new ArrayList<>();
+        double totalMarks = 0.0;
+        double totalAttendance = 0.0;
+        int totalCoursesCount = 0;
+        int studentCount = 0;
+        
+        for (Object[] row : studentData) {
+            UUID studentId = (UUID) row[0];
+            String studentName = (String) row[1];
+            java.sql.Date dateOfBirth = (java.sql.Date) row[2];
+            int coursesEnrolled = ((Number) row[3]).intValue();
+            
+            // Calculate age
+            int age = LocalDate.now().getYear() - dateOfBirth.toLocalDate().getYear();
+            
+            // Get course names using repository
+            List<String> courseNames = enrollmentRepository.findCourseNamesByStudentId(studentId);
+            
+            // Get average marks using existing repository method
+            Double avgMarks = gradeRepository.findAverageGPAForStudent(studentId);
+            if (avgMarks == null) {
+                avgMarks = 0.0;
+            }
+            
+            // Get average attendance using existing repository method
+            Double avgAttendance = attendanceRepository.findAttendanceRateForStudent(studentId);
+            if (avgAttendance == null) {
+                avgAttendance = 0.0;
+            }
+            
+            // Get dropout prediction probability and risk level using existing JPA method
+            Optional<DropoutPrediction> predictionOpt = dropoutPredictionRepository.findTopByStudentIdOrderByPredictedAtDesc(studentId);
+            double probability = 0.0;
+            String riskLevel = "UNKNOWN";
+            if (predictionOpt.isPresent()) {
+                DropoutPrediction prediction = predictionOpt.get();
+                probability = prediction.getProbability();
+                riskLevel = prediction.getRiskLevel() != null ? prediction.getRiskLevel().toString() : "UNKNOWN";
+            }
+            
+            // Get behavior incidents count
+            Integer behaviorIncidents = behaviorIncidentRepository.countByStudentId(studentId);
+            if (behaviorIncidents == null) {
+                behaviorIncidents = 0;
+            }
+            
+            students.add(new GovStudentDetailItemDTO(
+                studentId,
+                studentName,
+                coursesEnrolled,
+                courseNames,
+                avgMarks,
+                avgAttendance,
+                probability,
+                riskLevel,
+                age,
+                behaviorIncidents
+            ));
+            
+            totalMarks += avgMarks;
+            totalAttendance += avgAttendance;
+            totalCoursesCount += coursesEnrolled;
+            studentCount++;
+        }
+        
+        // Calculate averages
+        double avgMarks = studentCount > 0 ? Math.round((totalMarks / studentCount) * 10.0) / 10.0 : 0.0;
+        double avgAttendance = studentCount > 0 ? Math.round((totalAttendance / studentCount) * 10.0) / 10.0 : 0.0;
+        
+        return new GovStudentDetailsResponseDTO(avgMarks, avgAttendance, totalCoursesCount, students);
+    }
+    
+    @Override
+    public GovTeacherOverviewResponseDTO getTeacherOverview() {
+        List<Object[]> results = schoolRepository.findTeacherOverviewBySchools();
+        
+        List<GovTeacherOverviewItemDTO> schools = results.stream()
+            .map(row -> new GovTeacherOverviewItemDTO(
+                (UUID) row[0],           // school id
+                (String) row[1],         // school name
+                (String) row[2],         // region
+                ((Long) row[3]).intValue() // number of teachers
+            ))
+            .collect(Collectors.toList());
+        
+        return new GovTeacherOverviewResponseDTO(schools);
+    }
+    
+    @Override
+    public GovTeacherDetailsResponseDTO getTeacherDetails(UUID schoolId) {
+        List<Object[]> results = teacherRepository.findTeacherDetailsForGovernment(schoolId);
+        
+        List<GovTeacherDetailItemDTO> teachers = new ArrayList<>();
+        int totalCourses = 0;
+        int totalStudents = 0;
+        
+        for (Object[] row : results) {
+            UUID teacherId = (UUID) row[0];
+            String name = (String) row[1];
+            String specialization = (String) row[2];
+            int coursesTeaching = ((Long) row[3]).intValue();
+            
+            // Get course names
+            List<String> courseNames = courseRepository.findCourseNamesByTeacherId(teacherId);
+            
+            // Get total students across all courses
+            Integer studentCount = courseRepository.countStudentsByTeacherId(teacherId);
+            int numberOfStudents = studentCount != null ? studentCount : 0;
+            
+            teachers.add(new GovTeacherDetailItemDTO(
+                teacherId,
+                name,
+                specialization,
+                coursesTeaching,
+                courseNames,
+                numberOfStudents
+            ));
+            
+            totalCourses += coursesTeaching;
+            totalStudents += numberOfStudents;
+        }
+        
+        return new GovTeacherDetailsResponseDTO(totalCourses, totalStudents, teachers);
     }
 }

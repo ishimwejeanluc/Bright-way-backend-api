@@ -28,4 +28,13 @@ public interface IBehaviorIncidentRepository extends JpaRepository<BehaviorIncid
     List<BehaviorIncident> findByStudentId(UUID studentId);
 
     List<BehaviorIncident> findByStudent_IdAndCreatedAtAfter(UUID studentId, LocalDateTime createdAt);
+    
+    // Count behavior incidents for a specific school
+    @Query(value = """
+        SELECT COUNT(bi.id)
+        FROM behavior_incident bi
+        JOIN student s ON bi.student_id = s.id
+        WHERE s.school_id = :schoolId
+        """, nativeQuery = true)
+    Integer countBySchoolId(@Param("schoolId") UUID schoolId);
 }

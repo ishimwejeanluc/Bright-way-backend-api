@@ -28,4 +28,20 @@ public interface IStudentRepository extends JpaRepository<Student, UUID> {
 
 
     List<Student> findAllByActive(boolean active);
+    
+    // Get student details for government dashboard
+    @Query(value = """
+        SELECT 
+            s.id as student_id,
+            u.name as student_name,
+            s.date_of_birth,
+            COUNT(DISTINCT e.course_id) as courses_enrolled
+        FROM student s
+        JOIN users u ON s.user_id = u.id
+        LEFT JOIN enrollment e ON s.id = e.student_id
+        WHERE s.school_id = :schoolId
+        GROUP BY s.id, u.name, s.date_of_birth
+        ORDER BY u.name
+        """, nativeQuery = true)
+    List<Object[]> findStudentDetailsForGovernment(@Param("schoolId") UUID schoolId);
 }
