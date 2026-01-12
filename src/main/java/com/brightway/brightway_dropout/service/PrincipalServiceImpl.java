@@ -2,15 +2,20 @@ package com.brightway.brightway_dropout.service;
 
 import com.brightway.brightway_dropout.dto.principal.response.PrincipalDashboardOverviewResponseDTO;
 import com.brightway.brightway_dropout.dto.principal.response.PrincipalStudentOverviewResponseDTO;
+import com.brightway.brightway_dropout.dto.principal.response.PrincipalStudentProfileDTO;
 import com.brightway.brightway_dropout.dto.principal.response.StudentOverviewDTO;
 import com.brightway.brightway_dropout.dto.principal.response.RiskLevelTrendDTO;
+import com.brightway.brightway_dropout.dto.student.response.StCourseMarkDTO;
+import com.brightway.brightway_dropout.dto.behaviorIncident.response.StBehaviorIncidentDTO;
 import com.brightway.brightway_dropout.enumeration.ERiskLevel;
+import com.brightway.brightway_dropout.exception.ResourceNotFoundException;
 import com.brightway.brightway_dropout.model.*;
 import com.brightway.brightway_dropout.repository.IAttendanceRepository;
 import com.brightway.brightway_dropout.repository.IDropoutPredictionRepository;
 import com.brightway.brightway_dropout.repository.IStudentRepository;
 import com.brightway.brightway_dropout.repository.ITeacherRepository;
 import com.brightway.brightway_dropout.repository.IGradeRepository;
+import com.brightway.brightway_dropout.repository.IBehaviorIncidentRepository;
 
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -28,6 +33,7 @@ public class PrincipalServiceImpl implements IPrincipalService {
     private final IAttendanceRepository attendanceRepository;
     private final IDropoutPredictionRepository dropoutPredictionRepository;
     private final IGradeRepository gradeRepository;
+    private final IBehaviorIncidentRepository behaviorIncidentRepository;
 
     @Override
     public PrincipalDashboardOverviewResponseDTO getDashboardOverview(UUID schoolId) {
@@ -144,6 +150,72 @@ public class PrincipalServiceImpl implements IPrincipalService {
             atRisk,
             todayAttendance,
             studentDTOs
+        );
+    }
+    
+    @Override
+    public PrincipalStudentProfileDTO getStudentProfile(UUID studentId) {
+        // Fetch basic student profile data
+        List<Object[]> results = studentRepository.findStudentProfileById(studentId);
+        if (results.isEmpty()) {
+            throw new ResourceNotFoundException("Student with ID " + studentId + " not found");
+        }
+        
+        Object[] profileData = results.get(0);
+        
+        // Map basic data from query
+        UUID id = profileData[0] instanceof UUID ? (UUID) profileData[0] : UUID.fromString(profileData[0].toString());
+        String name = (String) profileData[1];
+        String studentCode = (String) profileData[2];
+        String schoolName = (String) profileData[3];
+        String parentName = (String) profileData[4];
+        String parentPhone = (String) profileData[5];
+        String parentEmail = (String) profileData[6];
+        String parentOccupation = (String) profileData[7];
+        String riskLevel = profileData[8] != null ? profileData[8].toString() : "UNKNOWN";
+        Double dropoutProbability = profileData[9] != null ? ((Number) profileData[9]).doubleValue() : 0.0;
+        Integer avgAttendance = profileData[10] != null ? ((Number) profileData[10]).intValue() : 0;
+        Double academicScore = profileData[11] != null ? ((Number) profileData[11]).doubleValue() : 0.0;
+        
+        // Calculate engagement percentage (simple formula based on attendance and academic performance)
+        Integer engagementPercent = (int) Math.round((avgAttendance + (academicScore * 10)) / 2);
+        
+        // Get current grades (average per course)
+        List<Object[]> gradeData = gradeRepository.findRecentGradesForStudent(studentId);
+        List<StCourseMarkDTO> currentGrades = gradeData.stream()
+            .map(row -> new StCourseMarkDTO(
+                "Average",        // type
+                (String) row[0],  // title (course name)
+                row[1] != null ? ((Number) row[1]).doubleValue() : 0.0  // score (average marks)
+            ))
+            .collect(Collectors.toList());
+        
+        // Get intervention log (behavior incidents)
+        List<Object[]> incidentData = behaviorIncidentRepository.findRecentIncidentsForStudent(studentId);
+        List<StBehaviorIncidentDTO> interventionLog = incidentData.stream()
+            .map(row -> new StBehaviorIncidentDTO(
+                (String) row[0],  // note
+                (String) row[1],  // incidentType
+                (String) row[2]   // severityLevel
+            ))
+            .collect(Collectors.toList());
+        
+        return new PrincipalStudentProfileDTO(
+            id,
+            name,
+            studentCode,
+            schoolName,
+            parentName,
+            parentPhone,
+            parentEmail,
+            parentOccupation,
+            riskLevel,
+            dropoutProbability,
+            avgAttendance,
+            academicScore,
+            engagementPercent,
+            currentGrades,
+            interventionLog
         );
     }
 }

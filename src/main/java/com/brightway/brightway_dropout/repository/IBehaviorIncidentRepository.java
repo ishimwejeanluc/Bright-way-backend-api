@@ -37,4 +37,17 @@ public interface IBehaviorIncidentRepository extends JpaRepository<BehaviorIncid
         WHERE s.school_id = :schoolId
         """, nativeQuery = true)
     Integer countBySchoolId(@Param("schoolId") UUID schoolId);
+    
+    // Get recent behavior incidents for student profile (intervention log)
+    @Query(value = """
+        SELECT 
+            bi.notes,
+            CAST(bi.type AS TEXT),
+            CAST(bi.severity AS TEXT)
+        FROM behavior_incident bi
+        WHERE bi.student_id = :studentId
+        ORDER BY bi.created_at DESC
+        LIMIT 10
+        """, nativeQuery = true)
+    List<Object[]> findRecentIncidentsForStudent(@Param("studentId") UUID studentId);
 }

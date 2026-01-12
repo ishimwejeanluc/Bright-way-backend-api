@@ -29,7 +29,7 @@ public class TeacherController {
 
     @PutMapping(value = "/{id}" )
     @PreAuthorize("hasRole('PRINCIPAL')")
-    public ResponseEntity<ApiResponse> updateTeacher(@PathVariable UUID id, @Valid @RequestBody CreateTeacherDTO updateTeacherDTO) {
+    public ResponseEntity<ApiResponse> updateTeacher(@PathVariable UUID id, @RequestBody CreateTeacherDTO updateTeacherDTO) {
         TeacherResponseDTO response = teacherService.updateTeacher(id, updateTeacherDTO);
         return new ResponseEntity<>(
                 new ApiResponse(true,

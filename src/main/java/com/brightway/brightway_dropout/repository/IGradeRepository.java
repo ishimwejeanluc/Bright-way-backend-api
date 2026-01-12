@@ -47,6 +47,20 @@ public interface IGradeRepository extends JpaRepository<Grade, UUID> {
         WHERE s.school_id = :schoolId
         """, nativeQuery = true)
     Object[] findOverallStats(@Param("schoolId") UUID schoolId);
+    
+    // Get current grades for student profile (recent grades with course name)
+    @Query(value = """
+        SELECT 
+            c.name,
+            ROUND(CAST(AVG(g.marks) AS NUMERIC), 2)
+        FROM grade g
+        JOIN enrollment e ON g.enrollment_id = e.id
+        JOIN course c ON e.course_id = c.id
+        WHERE e.student_id = :studentId
+        GROUP BY c.id, c.name
+        ORDER BY c.name
+        """, nativeQuery = true)
+    List<Object[]> findRecentGradesForStudent(@Param("studentId") UUID studentId);
 
     // Get student grades by teacher's userId, grouped by course
         // Get student grades by teacherId, grouped by course

@@ -2,6 +2,7 @@ package com.brightway.brightway_dropout.controller;
 
 import com.brightway.brightway_dropout.dto.principal.response.PrincipalDashboardOverviewResponseDTO;
 import com.brightway.brightway_dropout.dto.principal.response.PrincipalStudentOverviewResponseDTO;
+import com.brightway.brightway_dropout.dto.principal.response.PrincipalStudentProfileDTO;
 import com.brightway.brightway_dropout.service.IPrincipalService;
 import com.brightway.brightway_dropout.util.ApiResponse;
 import lombok.RequiredArgsConstructor;
@@ -34,6 +35,16 @@ public class PrincipalController {
         PrincipalStudentOverviewResponseDTO response = dashboardService.getStudentOverview(schoolId);
         return new ResponseEntity<>(
             new ApiResponse(true, "Student overview retrieved successfully", response),
+            HttpStatus.OK
+        );
+    }
+    
+    @GetMapping("/student-profile/{studentId}")
+    @PreAuthorize("hasRole('PRINCIPAL')")
+    public ResponseEntity<ApiResponse> getStudentProfile(@PathVariable UUID studentId) {
+        PrincipalStudentProfileDTO response = dashboardService.getStudentProfile(studentId);
+        return new ResponseEntity<>(
+            new ApiResponse(true, "Student profile retrieved successfully", response),
             HttpStatus.OK
         );
     }

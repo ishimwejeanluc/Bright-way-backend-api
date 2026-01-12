@@ -60,10 +60,11 @@ public class TeacherServiceImpl implements ITeacherService {
         List<TeacherDetailDTO> teacherDetails = teachers.stream().map(t -> {
             String name = t.getUser() != null ? t.getUser().getName() : null;
             String specialization = t.getSpecialization();
+            UUID teacherId = t.getId();
             List<String> courses = t.getCourses() != null ?
                 t.getCourses().stream().map(c -> c.getName()).toList() : List.of();
 
-            return new TeacherDetailDTO(name, specialization, courses, t.isActive());
+            return new TeacherDetailDTO(teacherId,name, specialization, courses, t.isActive());
         }).toList();
 
         return new TeacherStatsResponseDTO(teachers.size(), teacherDetails);
@@ -74,29 +75,45 @@ public class TeacherServiceImpl implements ITeacherService {
         Teacher teacher = teacherRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Teacher with ID " + id + " not found"));
 
-        // Update user details
+        // Update user details (only if provided)
         User user = teacher.getUser();
         if (user != null) {
-            user.setName(updateTeacherDTO.getName());
-            user.setEmail(updateTeacherDTO.getEmail());
+            // Only update fields that are actually provided (not null)
+            if (updateTeacherDTO.getName() != null && !updateTeacherDTO.getName().isEmpty()) {
+                user.setName(updateTeacherDTO.getName());
+            }
+            if (updateTeacherDTO.getEmail() != null && !updateTeacherDTO.getEmail().isEmpty()) {
+                user.setEmail(updateTeacherDTO.getEmail());
+            }
             if (updateTeacherDTO.getPassword() != null && !updateTeacherDTO.getPassword().isEmpty()) {
                 user.setPassword(passwordEncoder.encode(updateTeacherDTO.getPassword()));
             }
-            user.setPhone(updateTeacherDTO.getPhone());
+            if (updateTeacherDTO.getPhone() != null && !updateTeacherDTO.getPhone().isEmpty()) {
+                user.setPhone(updateTeacherDTO.getPhone());
+            }
+            
+            // Update audit field
+            UUID currentUserId = jwtUtil.getCurrentUserId();
+            if (currentUserId != null) {
+                user.setModifiedBy(currentUserId.toString());
+            }
+            
             authRepository.save(user);
         }
 
-        // Update school
+        // Update school (only if provided)
         if (updateTeacherDTO.getSchoolId() != null) {
             School school = schoolRepository.findById(updateTeacherDTO.getSchoolId())
                     .orElseThrow(() -> new ResourceNotFoundException("School with ID " + updateTeacherDTO.getSchoolId() + " not found"));
             teacher.setSchool(school);
         }
 
-        // Update specialization
-        teacher.setSpecialization(updateTeacherDTO.getSpecialization());
+        // Update specialization (only if provided)
+        if (updateTeacherDTO.getSpecialization() != null && !updateTeacherDTO.getSpecialization().isEmpty()) {
+            teacher.setSpecialization(updateTeacherDTO.getSpecialization());
+        }
 
-        // Update courses
+        // Update courses (only if provided)
         if (updateTeacherDTO.getCourses() != null && !updateTeacherDTO.getCourses().isEmpty()) {
             List<UUID> courseIds = updateTeacherDTO.getCourses();
             List<Course> courses = courseRepository.findAllById(courseIds);
@@ -105,7 +122,7 @@ public class TeacherServiceImpl implements ITeacherService {
             teacher.setCourses(courses);
         }
 
-        // Update audit field
+        // Update audit field for teacher
         UUID currentUserId = jwtUtil.getCurrentUserId();
         if (currentUserId != null) {
             teacher.setModifiedBy(currentUserId.toString());
@@ -213,13 +230,14 @@ public class TeacherServiceImpl implements ITeacherService {
             .orElseThrow(() -> new ResourceNotFoundException("Teacher with ID " + id + " not found"));
 
         String name = teacher.getUser() != null ? teacher.getUser().getName() : null;
+        UUID teacherId = teacher.getId();
         String specialization = teacher.getSpecialization();
         List<String> courses = teacher.getCourses() != null
             ? teacher.getCourses().stream().map(Course::getName).toList()
             : List.of();
 
 
-        return new TeacherDetailDTO(name, specialization, courses, teacher.isActive());
+        return new TeacherDetailDTO(teacherId,name, specialization, courses, teacher.isActive());
     }
 
     private TeacherResponseDTO mapToTeacherResponseDTO(Teacher teacher) {
