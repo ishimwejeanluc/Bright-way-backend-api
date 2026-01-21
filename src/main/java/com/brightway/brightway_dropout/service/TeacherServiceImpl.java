@@ -27,6 +27,9 @@ import com.brightway.brightway_dropout.repository.IAuthRepository;
 import com.brightway.brightway_dropout.repository.ICourseRepository;
 import com.brightway.brightway_dropout.repository.ISchoolRepository;
 import com.brightway.brightway_dropout.repository.ITeacherRepository;
+import com.brightway.brightway_dropout.repository.IAttendanceRepository;
+import com.brightway.brightway_dropout.repository.IDropoutPredictionRepository;
+import com.brightway.brightway_dropout.repository.IStudentRepository;
 import com.brightway.brightway_dropout.util.JwtUtil;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -36,8 +39,10 @@ import org.springframework.transaction.annotation.Transactional;
 import java.time.DayOfWeek;
 import java.time.LocalDate;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
@@ -51,6 +56,9 @@ public class TeacherServiceImpl implements ITeacherService {
     private final IAuthRepository authRepository;
     private final ISchoolRepository schoolRepository;
     private final ICourseRepository courseRepository;
+    private final IAttendanceRepository attendanceRepository;
+    private final IDropoutPredictionRepository dropoutPredictionRepository;
+    private final IStudentRepository studentRepository;
     private final PasswordEncoder passwordEncoder;
     private final JwtUtil jwtUtil;
 
@@ -320,7 +328,45 @@ public class TeacherServiceImpl implements ITeacherService {
         double todayAttendancePercentage = totalAttendanceRecords > 0
                 ? (presentCount * 100.0) / totalAttendanceRecords
                 : 0.0;
-        return new TeacherDashboardStatsDTO(totalStudents, totalCourses, todayAttendancePercentage, atRiskStudents);
+        
+        // Weekly attendance overview (Monday - Sunday)
+        LocalDate weekStart = today.with(DayOfWeek.MONDAY);
+        LocalDate weekEnd = today.with(DayOfWeek.SUNDAY);
+        List<Object[]> weeklyAttendanceData = attendanceRepository.findWeeklyAttendanceByTeacher(teacherId, weekStart, weekEnd);
+        List<DailyAttendanceDTO> weeklyAttendance = new ArrayList<>();
+        
+        // Create a map of date to attendance data for quick lookup
+        Map<LocalDate, DailyAttendanceDTO> dateToAttendanceMap = new HashMap<>();
+        for (Object[] row : weeklyAttendanceData) {
+            java.sql.Date sqlDate = (java.sql.Date) row[0];
+            LocalDate date = sqlDate.toLocalDate();
+            int presentCnt = ((Number) row[1]).intValue();
+            int absentCnt = ((Number) row[2]).intValue();
+            String dayName = date.getDayOfWeek().toString();
+            dateToAttendanceMap.put(date, new DailyAttendanceDTO(dayName, date, presentCnt, absentCnt));
+        }
+        
+        // Fill in all 7 days of the week (even if no data)
+        for (int i = 0; i < 7; i++) {
+            LocalDate currentDate = weekStart.plusDays(i);
+            if (dateToAttendanceMap.containsKey(currentDate)) {
+                weeklyAttendance.add(dateToAttendanceMap.get(currentDate));
+            } else {
+                String dayName = currentDate.getDayOfWeek().toString();
+                weeklyAttendance.add(new DailyAttendanceDTO(dayName, currentDate, 0, 0));
+            }
+        }
+        
+        // Top 3 at-risk students with highest dropout probability
+        List<Object[]> top3Data = dropoutPredictionRepository.findTop3AtRiskStudentsByTeacher(teacherId);
+        List<String> top3AtRiskStudents = new ArrayList<>();
+        for (Object[] row : top3Data) {
+            String studentName = (String) row[0];
+            top3AtRiskStudents.add(studentName);
+        }
+        
+        return new TeacherDashboardStatsDTO(totalStudents, totalCourses, todayAttendancePercentage, 
+                                            atRiskStudents, weeklyAttendance, top3AtRiskStudents);
     }
     @Override
     @Transactional(readOnly = true)
@@ -358,7 +404,7 @@ public class TeacherServiceImpl implements ITeacherService {
                     for (Student student : courseStudents) {
                         if (student.getAttendanceRecords() != null) {
                             for (Attendance attendance : student.getAttendanceRecords()) {
-                                if (attendance.getDate().equals(java.time.LocalDate.now())) {
+                                if (attendance.getDate().equals(LocalDate.now())) {
                                     courseTodayAttendanceRecords++;
                                     if (attendance.getStatus() == EAttendanceStatus.PRESENT) {
                                         coursePresentCount++;
@@ -511,9 +557,30 @@ public class TeacherServiceImpl implements ITeacherService {
             studentsList
         );
     }
+    
+    @Override
+    @Transactional(readOnly = true)
+    public List<TeacherStudentListDTO> getTeacherStudents(UUID userId) {
+        UUID teacherId = getTeacherId(userId);
+        List<Object[]> studentsData = studentRepository.findStudentsByTeacherId(teacherId);
+        
+        List<TeacherStudentListDTO> students = new ArrayList<>();
+        for (Object[] row : studentsData) {
+            UUID studentId = (UUID) row[0];
+            String name = (String) row[1];
+            String riskLevel = (String) row[2];
+            Double averageAttendance = row[3] != null ? ((Number) row[3]).doubleValue() : null;
+            Float dropoutProbability = row[4] != null ? ((Number) row[4]).floatValue() : null;
+            
+            students.add(new TeacherStudentListDTO(studentId, name, riskLevel, averageAttendance, dropoutProbability));
+        }
+        
+        return students;
+    }
+    
     public UUID getTeacherId(UUID userId){
-    Teacher teacher = teacherRepository.findByUserId(userId)
-            .orElseThrow(() -> new ResourceNotFoundException("User with ID " + userId + " not found"));
+        Teacher teacher = teacherRepository.findByUserId(userId)
+                .orElseThrow(() -> new ResourceNotFoundException("User with ID " + userId + " not found"));
         return teacher.getId();
     }
-}
+} 

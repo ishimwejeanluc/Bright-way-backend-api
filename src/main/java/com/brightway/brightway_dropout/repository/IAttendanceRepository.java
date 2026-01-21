@@ -157,4 +157,23 @@ public interface IAttendanceRepository extends JpaRepository<Attendance, UUID> {
         WHERE s.school_id = :schoolId
         """, nativeQuery = true)
     Double calculateAverageAttendanceForSchoolAllTime(@Param("schoolId") UUID schoolId);
+    
+    // Weekly attendance overview for teacher - aggregated across all their courses
+    @Query(value = """
+        SELECT 
+            a.date,
+            COUNT(CASE WHEN a.status = 'PRESENT' THEN 1 END) as present_count,
+            COUNT(CASE WHEN a.status = 'ABSENT' THEN 1 END) as absent_count
+        FROM attendance a
+        INNER JOIN student s ON a.student_id = s.id
+        INNER JOIN enrollment e ON s.id = e.student_id
+        INNER JOIN course c ON e.course_id = c.id
+        WHERE c.teacher_id = :teacherId
+          AND a.date >= :startDate AND a.date <= :endDate
+        GROUP BY a.date
+        ORDER BY a.date
+        """, nativeQuery = true)
+    List<Object[]> findWeeklyAttendanceByTeacher(@Param("teacherId") UUID teacherId, 
+                                                   @Param("startDate") LocalDate startDate, 
+                                                   @Param("endDate") LocalDate endDate);
 }

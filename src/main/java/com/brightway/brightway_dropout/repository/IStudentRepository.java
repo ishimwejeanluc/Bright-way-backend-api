@@ -29,6 +29,8 @@ public interface IStudentRepository extends JpaRepository<Student, UUID> {
 
     List<Student> findAllByActive(boolean active);
     
+    List<Student> findBySchoolIdAndStatus(UUID schoolId, com.brightway.brightway_dropout.enumeration.EStudentStatus status);
+    
     // Get student details for government dashboard
     @Query(value = """
         SELECT 
@@ -99,4 +101,31 @@ public interface IStudentRepository extends JpaRepository<Student, UUID> {
         WHERE a.student_id = :studentId
         """, nativeQuery = true)
     List<Object[]> findAttendanceOverviewByPeriods(@Param("studentId") UUID studentId);
+    
+    // Get all students for a specific teacher with risk level, attendance, and dropout probability
+    @Query(value = """
+        SELECT DISTINCT
+            s.id,
+            u.name,
+            dp.risk_level,
+            ROUND(CAST((COUNT(CASE WHEN a.status = 'PRESENT' THEN 1 END) * 100.0) 
+                / NULLIF(COUNT(a.id), 0) AS NUMERIC), 2) as avg_attendance,
+            dp.probability
+        FROM student s
+        INNER JOIN users u ON s.user_id = u.id
+        INNER JOIN enrollment e ON s.id = e.student_id
+        INNER JOIN course c ON e.course_id = c.id
+        LEFT JOIN attendance a ON s.id = a.student_id
+        LEFT JOIN LATERAL (
+            SELECT risk_level, probability
+            FROM dropout_predictions
+            WHERE student_id = s.id
+            ORDER BY predicted_at DESC
+            LIMIT 1
+        ) dp ON true
+        WHERE c.teacher_id = :teacherId
+        GROUP BY s.id, u.name, dp.risk_level, dp.probability
+        ORDER BY u.name
+        """, nativeQuery = true)
+    List<Object[]> findStudentsByTeacherId(@Param("teacherId") UUID teacherId);
 }

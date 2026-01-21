@@ -8,8 +8,8 @@ import com.brightway.brightway_dropout.dto.ml.StudentFeaturesDTO;
 import com.brightway.brightway_dropout.dto.ml.TopFactor;
 import com.brightway.brightway_dropout.dto.prediction.response.BatchPredictionResponseDTO;
 import com.brightway.brightway_dropout.dto.prediction.response.PredictionItemResponseDTO;
-import com.brightway.brightway_dropout.dto.prediction.response.RiskFactorDTO;
 import com.brightway.brightway_dropout.dto.prediction.response.SinglePredictionResponseDTO;
+import com.brightway.brightway_dropout.dto.prediction.response.StudentPredictionProfileDTO;
 import com.brightway.brightway_dropout.enumeration.ERiskLevel;
 import com.brightway.brightway_dropout.enumeration.EStudentStatus;
 import com.brightway.brightway_dropout.exception.MLServiceException;
@@ -25,12 +25,15 @@ import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.stream.Collectors;
+
 
 @Service
 @Slf4j
@@ -54,6 +57,102 @@ public class DropoutPredictionServiceImpl implements IDropoutPredictionService {
     private final AtomicBoolean isRunning = new AtomicBoolean(false);
     
     @Override
+    public List<PredictionItemResponseDTO> getPredictionsBySchool(UUID schoolId) {
+        log.info("Fetching predictions for school: {}", schoolId);
+        
+        List<Object[]> results = dropoutPredictionRepository.findPredictionsBySchoolId(schoolId);
+        
+        return results.stream()
+            .map(row -> new PredictionItemResponseDTO(
+                (UUID) row[0],                         // studentId
+                (String) row[1],                       // studentName
+                ((Number) row[2]).doubleValue(),       // probability
+                (String) row[3],                       // riskLevel
+                (String) row[4],                       // topFactor
+                ((java.sql.Timestamp) row[5]).toLocalDateTime()  // predictedAt
+            ))
+            .collect(Collectors.toList());
+    }
+    
+    @Override
+    public StudentPredictionProfileDTO getPredictionProfile(UUID studentId) {
+        log.info("Fetching prediction profile for student: {}", studentId);
+        
+        // Get student
+        Student student = studentRepository.findById(studentId)
+            .orElseThrow(() -> new IllegalArgumentException("Student not found: " + studentId));
+        
+        // Get latest prediction
+        DropoutPrediction prediction = dropoutPredictionRepository
+            .findTopByStudentIdOrderByPredictedAtDesc(studentId)
+            .orElse(null);
+        
+        // Get latest ML features
+        StudentMLFeatures mlFeatures = studentMLFeaturesRepository
+            .findTopByStudent_IdOrderByCalculatedAtDesc(studentId)
+            .orElse(null);
+        
+        // Build DTO
+        com.brightway.brightway_dropout.dto.prediction.response.StudentPredictionProfileDTO profile = 
+            new com.brightway.brightway_dropout.dto.prediction.response.StudentPredictionProfileDTO();
+        
+        profile.setStudentId(studentId);
+        profile.setStudentName(student.getUser().getName());
+        
+        // Dropout prediction data
+        if (prediction != null) {
+            profile.setProbability((double) prediction.getProbability());
+            profile.setRiskLevel(prediction.getRiskLevel().toString());
+            profile.setTopFactor(prediction.getTopFactor());
+            profile.setPredictedAt(prediction.getPredictedAt());
+        }
+        
+        // ML features data
+        if (mlFeatures != null) {
+            // Academic
+            profile.setAverageMarks(mlFeatures.getAverageMarks());
+            profile.setLowestGrade(mlFeatures.getLowestGrade());
+            profile.setFailingCoursesCount(mlFeatures.getFailingCoursesCount());
+            profile.setWeeksEnrolled(mlFeatures.getWeeksEnrolled());
+            
+            // Attendance
+            profile.setAttendanceRate(mlFeatures.getAttendanceRate());
+            profile.setDaysAbsent(mlFeatures.getDaysAbsent());
+            profile.setConsecutiveAbsences(mlFeatures.getConsecutiveAbsences());
+            
+            // Behavior
+            profile.setIncidentCount(mlFeatures.getIncidentCount());
+            profile.setSeverityScore(mlFeatures.getSeverityScore());
+            profile.setDaysSinceLastIncident(mlFeatures.getDaysSinceLastIncident());
+            
+            // Personal
+            profile.setAge(mlFeatures.getAge());
+            profile.setGender(mlFeatures.getGenderEncoded() == 1 ? "Male" : "Female");
+        } else {
+            // Use current calculated features if no saved ML features
+            StudentFeaturesDTO features = featureCalculationService.calculateFeatures(student);
+            
+            profile.setAverageMarks(features.getAverageMarks());
+            profile.setLowestGrade(features.getLowestGrade());
+            profile.setFailingCoursesCount(features.getFailingCoursesCount());
+            profile.setWeeksEnrolled(features.getWeeksEnrolled());
+            
+            profile.setAttendanceRate(features.getAttendanceRate());
+            profile.setDaysAbsent(features.getDaysAbsent());
+            profile.setConsecutiveAbsences(features.getConsecutiveAbsences());
+            
+            profile.setIncidentCount(features.getIncidentCount());
+            profile.setSeverityScore(features.getSeverityScore());
+            profile.setDaysSinceLastIncident(features.getDaysSinceLastIncident());
+            
+            profile.setAge(features.getAge());
+            profile.setGender(features.getGenderEncoded() == 1 ? "Male" : "Female");
+        }
+        
+        return profile;
+    }
+    
+    @Override
     @Scheduled(cron = "${ml.prediction.schedule:0 0 0 */14 * *}") // Every 2 weeks at midnight
     public void runScheduledPredictions() {
         log.info("Scheduled prediction job triggered");
@@ -65,6 +164,13 @@ public class DropoutPredictionServiceImpl implements IDropoutPredictionService {
     public BatchPredictionResponseDTO runManualPredictions() {
         log.info("Manual prediction job triggered by admin");
         return executeManualCore();
+    }
+    
+    @Override
+    @Transactional
+    public BatchPredictionResponseDTO runPredictionsForSchool(UUID schoolId) {
+        log.info("Manual prediction job triggered for school: {}", schoolId);
+        return executeManualCoreForSchool(schoolId);
     }
     
     @Override
@@ -162,10 +268,32 @@ public class DropoutPredictionServiceImpl implements IDropoutPredictionService {
                 return;
             }
             
-            log.info("Found {} active students", activeStudents.size());
+            // Filter students with sufficient data (weeksEnrolled > 1 AND has grades/attendance)
+            List<Student> eligibleStudents = activeStudents.stream()
+                .filter(student -> {
+                    if (student.getCreatedAt() != null) {
+                        long weeks = ChronoUnit.WEEKS.between(student.getCreatedAt().toLocalDate(), LocalDate.now());
+                        if (weeks <= 1) return false;
+                    }
+                    
+                    // Check if student has grades or attendance data
+                    StudentFeaturesDTO features = featureCalculationService.calculateFeatures(student);
+                    boolean hasGrades = features.getAverageMarks() > 0 || features.getLowestGrade() > 0;
+                    boolean hasAttendance = features.getAttendanceRate() > 0 || features.getDaysAbsent() > 0;
+                    
+                    return hasGrades || hasAttendance;
+                })
+                .collect(Collectors.toList());
+            
+            log.info("Found {} active students, {} eligible for prediction", activeStudents.size(), eligibleStudents.size());
+            
+            if (eligibleStudents.isEmpty()) {
+                log.warn("No eligible students found (no sufficient data)");
+                return;
+            }
             
             // Run predictions
-            PredictionResponseDTO response = runPredictionsForStudents(activeStudents);
+            PredictionResponseDTO response = runPredictionsForStudents(eligibleStudents);
             
             // Log results
             long highRiskCount = response.getPredictions().stream()
@@ -292,17 +420,94 @@ public class DropoutPredictionServiceImpl implements IDropoutPredictionService {
                 return new BatchPredictionResponseDTO(0, List.of());
             }
             
-            log.info("Found {} active students", activeStudents.size());
+            // Filter students with sufficient data (weeksEnrolled > 1 AND has grades/attendance)
+            List<Student> eligibleStudents = activeStudents.stream()
+                .filter(student -> {
+                    if (student.getCreatedAt() != null) {
+                        long weeks = ChronoUnit.WEEKS.between(student.getCreatedAt().toLocalDate(), LocalDate.now());
+                        if (weeks <= 1) return false;
+                    }
+                    
+                    // Check if student has grades or attendance data
+                    StudentFeaturesDTO features = featureCalculationService.calculateFeatures(student);
+                    boolean hasGrades = features.getAverageMarks() > 0 || features.getLowestGrade() > 0;
+                    boolean hasAttendance = features.getAttendanceRate() > 0 || features.getDaysAbsent() > 0;
+                    
+                    return hasGrades || hasAttendance;
+                })
+                .collect(Collectors.toList());
             
-            PredictionResponseDTO mlResponse = runPredictionsForStudents(activeStudents);
+            log.info("Found {} active students, {} eligible for prediction", activeStudents.size(), eligibleStudents.size());
             
-            return convertToBatchPredictionResponse(activeStudents, mlResponse);
+            if (eligibleStudents.isEmpty()) {
+                log.warn("No eligible students found (no sufficient data)");
+                return new BatchPredictionResponseDTO(0, List.of());
+            }
+            
+            PredictionResponseDTO mlResponse = runPredictionsForStudents(eligibleStudents);
+            
+            return convertToBatchPredictionResponse(eligibleStudents, mlResponse);
             
         } catch (MLServiceException e) {
             log.error("ML service error: {}", e.getMessage());
             throw e;
         } catch (Exception e) {
             log.error("Batch prediction failed", e);
+            throw e;
+        } finally {
+            isRunning.set(false);
+        }
+    }
+    
+    private BatchPredictionResponseDTO executeManualCoreForSchool(UUID schoolId) {
+        if (!isRunning.compareAndSet(false, true)) {
+            log.warn("Prediction job already running, skipping");
+            throw new IllegalStateException("Prediction job already running");
+        }
+        
+        try {
+            log.info("Starting batch dropout prediction for school: {}", schoolId);
+            
+            List<Student> activeStudents = studentRepository.findBySchoolIdAndStatus(schoolId, EStudentStatus.ACTIVE);
+            
+            if (activeStudents.isEmpty()) {
+                log.warn("No active students found for school: {}", schoolId);
+                return new BatchPredictionResponseDTO(0, List.of());
+            }
+            
+            // Filter students with sufficient data (weeksEnrolled > 1 AND has grades/attendance)
+            List<Student> eligibleStudents = activeStudents.stream()
+                .filter(student -> {
+                    if (student.getCreatedAt() != null) {
+                        long weeks = ChronoUnit.WEEKS.between(student.getCreatedAt().toLocalDate(), LocalDate.now());
+                        if (weeks <= 1) return false;
+                    }
+                    
+                    // Check if student has grades or attendance data
+                    StudentFeaturesDTO features = featureCalculationService.calculateFeatures(student);
+                    boolean hasGrades = features.getAverageMarks() > 0 || features.getLowestGrade() > 0;
+                    boolean hasAttendance = features.getAttendanceRate() > 0 || features.getDaysAbsent() > 0;
+                    
+                    return hasGrades || hasAttendance;
+                })
+                .collect(Collectors.toList());
+            
+            log.info("Found {} active students in school, {} eligible for prediction", activeStudents.size(), eligibleStudents.size());
+            
+            if (eligibleStudents.isEmpty()) {
+                log.warn("No eligible students found for school (no sufficient data)");
+                return new BatchPredictionResponseDTO(0, List.of());
+            }
+            
+            PredictionResponseDTO mlResponse = runPredictionsForStudents(eligibleStudents);
+            
+            return convertToBatchPredictionResponse(eligibleStudents, mlResponse);
+            
+        } catch (MLServiceException e) {
+            log.error("ML service error: {}", e.getMessage());
+            throw e;
+        } catch (Exception e) {
+            log.error("Batch prediction failed for school {}: {}", schoolId, e.getMessage());
             throw e;
         } finally {
             isRunning.set(false);

@@ -64,7 +64,7 @@ public class MLFeatureCalculationServiceImpl implements IMLFeatureCalculationSer
         int daysSinceLastIncident = calculateDaysSinceLastIncident(recentIncidents);
         
         // Calculate demographics
-        int weeksEnrolled = calculateWeeksEnrolled(student.getEnrollmentYear());
+        int weeksEnrolled = calculateWeeksEnrolled(student);
         int age = calculateAge(student.getDateOfBirth());
         int genderEncoded = student.getGender() == EGender.MALE ? 1 : 0;
         
@@ -258,10 +258,18 @@ public class MLFeatureCalculationServiceImpl implements IMLFeatureCalculationSer
         return (int) ChronoUnit.DAYS.between(mostRecent.toLocalDate(), LocalDate.now());
     }
     
-    private int calculateWeeksEnrolled(int enrollmentYear) {
-        // Assume enrollment starts in September
-        LocalDate enrollmentDate = LocalDate.of(enrollmentYear, 9, 1);
-        return (int) ChronoUnit.WEEKS.between(enrollmentDate, LocalDate.now());
+    private int calculateWeeksEnrolled(Student student) {
+        // Use the actual createdAt timestamp if available
+        if (student.getCreatedAt() != null) {
+            LocalDate createdDate = student.getCreatedAt().toLocalDate();
+            long weeks = ChronoUnit.WEEKS.between(createdDate, LocalDate.now());
+            return (int) Math.max(0, weeks); // Ensure non-negative
+        }
+        
+        // Fallback: Assume enrollment starts in September of enrollment year
+        LocalDate enrollmentDate = LocalDate.of(student.getEnrollmentYear(), 9, 1);
+        long weeks = ChronoUnit.WEEKS.between(enrollmentDate, LocalDate.now());
+        return (int) Math.max(0, weeks); // Ensure non-negative
     }
     
     private int calculateAge(LocalDate dateOfBirth) {

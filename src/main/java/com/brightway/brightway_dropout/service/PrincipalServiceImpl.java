@@ -72,27 +72,36 @@ public class PrincipalServiceImpl implements IPrincipalService {
                 todayAttendance = total > 0 ? (int) Math.round((present.doubleValue() * 100.0) / total) : 0;
             }
 
-        // Risk level trends: group by date, then by risk level
-        List<DropoutPrediction> allPredictions = dropoutPredictionRepository.findAllBySchoolId(schoolId)
-            .stream()
-            .filter(d -> d.getCreatedAt() != null)
-            .collect(Collectors.toList());
-        Map<LocalDate, Map<ERiskLevel, Long>> trends = allPredictions.stream()
-            .collect(Collectors.groupingBy(
-                d -> d.getCreatedAt().toLocalDate(),
-                Collectors.groupingBy(DropoutPrediction::getRiskLevel, Collectors.counting())
-            ));
-        List<RiskLevelTrendDTO> riskLevelTrends = new ArrayList<>();
-        for (Map.Entry<LocalDate, Map<ERiskLevel, Long>> entry : trends.entrySet()) {
-            Map<ERiskLevel, Long> levels = entry.getValue();
-            riskLevelTrends.add(new RiskLevelTrendDTO(
-                entry.getKey().toString(),
-                levels.getOrDefault(ERiskLevel.LOW, 0L).intValue(),
-                levels.getOrDefault(ERiskLevel.MEDIUM, 0L).intValue(),
-                levels.getOrDefault(ERiskLevel.HIGH, 0L).intValue(),
-                levels.getOrDefault(ERiskLevel.CRITICAL, 0L).intValue()
-            ));
+        // Risk level trends: get latest prediction per student per date, then count by risk level
+        List<Object[]> trendResults = dropoutPredictionRepository.findRiskLevelTrendsBySchool(schoolId);
+        
+        // Group results by date
+        Map<String, RiskLevelTrendDTO> trendMap = new HashMap<>();
+        
+        for (Object[] row : trendResults) {
+            if (row[0] == null || row[1] == null) {
+                continue; // Skip null dates or risk levels
+            }
+            
+            java.sql.Date sqlDate = (java.sql.Date) row[0];
+            String date = sqlDate.toLocalDate().toString();
+            String riskLevel = (String) row[1];
+            int count = ((Number) row[2]).intValue();
+            
+            RiskLevelTrendDTO dto = trendMap.getOrDefault(date, 
+                new RiskLevelTrendDTO(date, 0, 0, 0, 0));
+            
+            switch (riskLevel) {
+                case "LOW" -> dto.setLow(count);
+                case "MEDIUM" -> dto.setMedium(count);
+                case "HIGH" -> dto.setHigh(count);
+                case "CRITICAL" -> dto.setCritical(count);
+            }
+            
+            trendMap.put(date, dto);
         }
+        
+        List<RiskLevelTrendDTO> riskLevelTrends = new ArrayList<>(trendMap.values());
 
         return new PrincipalDashboardOverviewResponseDTO(
             totalStudents,

@@ -4,16 +4,14 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.HashMap;
 import java.util.Collections;
-import com.brightway.brightway_dropout.enumeration.EStudentStatus;
-import com.brightway.brightway_dropout.enumeration.EUserRole;
+
+import com.brightway.brightway_dropout.enumeration.*;
 import com.brightway.brightway_dropout.exception.ResourceAlreadyExistsException;
 import com.brightway.brightway_dropout.exception.ResourceNotFoundException;
 import com.brightway.brightway_dropout.dto.student.request.CreateStudentWithParentRequestDTO;
 import com.brightway.brightway_dropout.dto.student.response.CreateStudentWithParentResponseDTO;
 import com.brightway.brightway_dropout.dto.student.response.StudentDetailDTO;
 import com.brightway.brightway_dropout.dto.student.response.StudentStatsResponseDTO;
-import com.brightway.brightway_dropout.enumeration.EAttendanceStatus;
-import com.brightway.brightway_dropout.enumeration.ERiskLevel;
 import com.brightway.brightway_dropout.model.DropoutPrediction;
 import com.brightway.brightway_dropout.model.Enrollment;
 import com.brightway.brightway_dropout.model.Grade;
@@ -21,6 +19,7 @@ import com.brightway.brightway_dropout.model.Parent;
 import com.brightway.brightway_dropout.model.School;
 import com.brightway.brightway_dropout.model.Student;
 import com.brightway.brightway_dropout.model.User;
+import com.brightway.brightway_dropout.model.Course;
 import com.brightway.brightway_dropout.repository.IAuthRepository;
 import com.brightway.brightway_dropout.repository.IEnrollmentRepository;
 import com.brightway.brightway_dropout.repository.IParentRepository;
@@ -30,6 +29,7 @@ import com.brightway.brightway_dropout.repository.IAttendanceRepository;
 import com.brightway.brightway_dropout.repository.IGradeRepository;
 import com.brightway.brightway_dropout.repository.IBehaviorIncidentRepository;
 import com.brightway.brightway_dropout.repository.IDropoutPredictionRepository;
+import com.brightway.brightway_dropout.repository.ICourseRepository;
 import com.brightway.brightway_dropout.util.JwtUtil;
 
 import lombok.RequiredArgsConstructor;
@@ -62,6 +62,7 @@ public class StudentServiceImpl implements IStudentService {
     private final IAuthRepository authRepository;
     private final ISchoolRepository schoolRepository;
     private final IEnrollmentRepository enrollmentRepository;
+    private final ICourseRepository courseRepository;
     private final PasswordEncoder passwordEncoder;
     private final JwtUtil jwtUtil;
     private final IAttendanceRepository attendanceRepository;
@@ -237,7 +238,26 @@ public class StudentServiceImpl implements IStudentService {
         }
         Student savedStudent = studentRepository.save(student);
 
-        // 6. Return response
+        // 6. Create enrollments for the courses
+        if (dto.getCourseIds() != null && !dto.getCourseIds().isEmpty()) {
+            for (UUID courseId : dto.getCourseIds()) {
+                Course course = courseRepository.findById(courseId)
+                    .orElseThrow(() -> new ResourceNotFoundException("Course with ID " + courseId + " not found"));
+                
+                Enrollment enrollment = new Enrollment();
+                enrollment.setStudent(savedStudent);
+                enrollment.setCourse(course);
+                enrollment.setAcademicYear(dto.getAcademicYear());
+                enrollment.setSemester(ESemester.valueOf(dto.getSemester()));
+                if (currentUserId != null) {
+                    enrollment.setCreatedBy(currentUserId.toString());
+                    enrollment.setModifiedBy(currentUserId.toString());
+                }
+                enrollmentRepository.save(enrollment);
+            }
+        }
+
+
         return new CreateStudentWithParentResponseDTO(
             savedStudent.getId(),
             savedParent.getId(),

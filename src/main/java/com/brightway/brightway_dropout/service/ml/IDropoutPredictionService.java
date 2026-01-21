@@ -3,6 +3,7 @@ package com.brightway.brightway_dropout.service.ml;
 import com.brightway.brightway_dropout.dto.ml.PredictionResponseDTO;
 import com.brightway.brightway_dropout.dto.prediction.response.BatchPredictionResponseDTO;
 import com.brightway.brightway_dropout.dto.prediction.response.SinglePredictionResponseDTO;
+import com.brightway.brightway_dropout.dto.prediction.response.StudentPredictionProfileDTO;
 import com.brightway.brightway_dropout.model.Student;
 
 import java.util.List;
@@ -22,6 +23,13 @@ public interface IDropoutPredictionService {
     BatchPredictionResponseDTO runManualPredictions();
     
     /**
+     * Run batch predictions for students in a specific school
+     * @param schoolId School UUID
+     * @return BatchPredictionResponseDTO for frontend
+     */
+    BatchPredictionResponseDTO runPredictionsForSchool(UUID schoolId);
+    
+    /**
      * Run prediction for single student
      * @param studentId Student UUID
      * @return SinglePredictionResponseDTO for frontend
@@ -34,4 +42,18 @@ public interface IDropoutPredictionService {
      * @return PredictionResponseDTO
      */
     PredictionResponseDTO runPredictionsForStudents(List<Student> students);
+    
+    /**
+     * Get predictions by school
+     * @param schoolId School UUID
+     * @return List of PredictionItemResponseDTO
+     */
+    java.util.List<com.brightway.brightway_dropout.dto.prediction.response.PredictionItemResponseDTO> getPredictionsBySchool(UUID schoolId);
+    
+    /**
+     * Get prediction profile for a student
+     * @param studentId Student UUID
+     * @return StudentPredictionProfileDTO
+     */
+    StudentPredictionProfileDTO getPredictionProfile(UUID studentId);
 }

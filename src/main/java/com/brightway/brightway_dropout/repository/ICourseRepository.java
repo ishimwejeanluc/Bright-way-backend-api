@@ -13,6 +13,8 @@ import java.util.UUID;
 @Repository
 public interface ICourseRepository extends JpaRepository<Course, UUID> {
     Optional<Course> findByName(String name);
+    Optional <Course> findById(UUID id);
+    
     List<Course> findBySchoolId(UUID schoolId);
 
     @Query("SELECT DISTINCT c FROM Course c " +

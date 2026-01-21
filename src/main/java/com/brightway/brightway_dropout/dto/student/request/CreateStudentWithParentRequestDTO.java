@@ -3,6 +3,7 @@ package com.brightway.brightway_dropout.dto.student.request;
 import lombok.Getter;
 import lombok.Setter;
 
+import java.util.List;
 import java.util.UUID;
 
 @Getter
@@ -24,4 +25,9 @@ public class CreateStudentWithParentRequestDTO {
     private String gender;
     private int enrollmentYear;
     private UUID schoolId;
+    
+    // Course enrollment info
+    private List<UUID> courseIds;
+    private String academicYear;
+    private String semester;
 }

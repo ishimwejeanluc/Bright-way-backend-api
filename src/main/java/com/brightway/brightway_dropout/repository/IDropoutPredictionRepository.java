@@ -7,6 +7,9 @@ import org.springframework.data.repository.query.Param;
 
 import java.util.Optional;
 import java.util.UUID;
+import java.time.LocalDate;
+import java.util.List;
+import java.time.LocalDateTime;
 
 public interface IDropoutPredictionRepository extends JpaRepository<DropoutPrediction, UUID> {
         @Query("SELECT d FROM DropoutPrediction d WHERE d.student.school.id = :schoolId")
@@ -48,6 +51,23 @@ public interface IDropoutPredictionRepository extends JpaRepository<DropoutPredi
         """, nativeQuery = true)
     Integer countAtRiskStudentsBySchoolId(@Param("schoolId") UUID schoolId);
     
+    @Query(value = """
+        SELECT dp.student_id, u.name, dp.probability, dp.risk_level, dp.top_factor, dp.predicted_at
+        FROM dropout_predictions dp
+        INNER JOIN student s ON dp.student_id = s.id
+        INNER JOIN users u ON s.user_id = u.id
+        WHERE s.school_id = :schoolId
+        AND dp.id IN (
+            SELECT id
+            FROM dropout_predictions
+            WHERE student_id = dp.student_id
+            ORDER BY predicted_at DESC
+            LIMIT 1
+        )
+        ORDER BY dp.predicted_at DESC
+        """, nativeQuery = true)
+    List<Object[]> findPredictionsBySchoolId(@Param("schoolId") UUID schoolId);
+    
     // Government dashboard queries - calculate dropout rate based on student status
     @Query(value = """
         SELECT ROUND((COUNT(CASE WHEN s.status = 'DROPPED' THEN 1 END) * 100.0) / NULLIF(COUNT(s.id), 0), 1)
@@ -61,7 +81,7 @@ public interface IDropoutPredictionRepository extends JpaRepository<DropoutPredi
         FROM student s
         WHERE s.school_id IN :schoolIds
         """, nativeQuery = true)
-    Double calculateDropoutRateForSpecificSchools(@Param("schoolIds") java.util.List<UUID> schoolIds);
+    Double calculateDropoutRateForSpecificSchools(@Param("schoolIds") List<UUID> schoolIds);
     
     // Calculate risk trends grouped by month for all schools
     @Query(value = """
@@ -84,8 +104,8 @@ public interface IDropoutPredictionRepository extends JpaRepository<DropoutPredi
         GROUP BY TO_CHAR(latest.created_at, 'Mon'), EXTRACT(MONTH FROM latest.created_at)
         ORDER BY EXTRACT(MONTH FROM latest.created_at)
         """, nativeQuery = true)
-    java.util.List<Object[]> calculateRiskTrendsByMonthForAllSchools(@Param("startDate") java.time.LocalDate startDate,
-                                                                      @Param("endDate") java.time.LocalDate endDate);
+    List<Object[]> calculateRiskTrendsByMonthForAllSchools(@Param("startDate") LocalDate startDate,
+                                                                      @Param("endDate") LocalDate endDate);
     
     // Calculate risk trends grouped by month for specific schools
     @Query(value = """
@@ -109,7 +129,51 @@ public interface IDropoutPredictionRepository extends JpaRepository<DropoutPredi
         GROUP BY TO_CHAR(latest.created_at, 'Mon'), EXTRACT(MONTH FROM latest.created_at)
         ORDER BY EXTRACT(MONTH FROM latest.created_at)
         """, nativeQuery = true)
-    java.util.List<Object[]> calculateRiskTrendsByMonthForSpecificSchools(@Param("startDate") java.time.LocalDate startDate,
-                                                                           @Param("endDate") java.time.LocalDate endDate,
-                                                                           @Param("schoolIds") java.util.List<UUID> schoolIds);
+    List<Object[]> calculateRiskTrendsByMonthForSpecificSchools(@Param("startDate") LocalDate startDate,
+                                                                           @Param("endDate") LocalDate endDate,
+                                                                           @Param("schoolIds") List<UUID> schoolIds);
+    
+    // Top 3 at-risk students for a specific teacher - aggregated across all their courses
+    @Query(value = """
+        SELECT DISTINCT
+            u.name,
+            dp.probability
+        FROM dropout_predictions dp
+        INNER JOIN student s ON dp.student_id = s.id
+        INNER JOIN users u ON s.user_id = u.id
+        INNER JOIN enrollment e ON s.id = e.student_id
+        INNER JOIN course c ON e.course_id = c.id
+        WHERE c.teacher_id = :teacherId
+          AND dp.id IN (
+              SELECT id
+              FROM dropout_predictions
+              WHERE student_id = dp.student_id
+              ORDER BY predicted_at DESC
+              LIMIT 1
+          )
+        ORDER BY dp.probability DESC
+        LIMIT 3
+        """, nativeQuery = true)
+    List<Object[]> findTop3AtRiskStudentsByTeacher(@Param("teacherId") UUID teacherId);
+    
+    // Get risk level trends by school - only latest prediction per student per date
+    @Query(value = """
+        SELECT 
+            DATE(latest.created_at) as prediction_date,
+            latest.risk_level,
+            COUNT(*) as count
+        FROM (
+            SELECT DISTINCT ON (dp.student_id, DATE(dp.created_at))
+                dp.student_id,
+                dp.created_at,
+                dp.risk_level
+            FROM dropout_predictions dp
+            INNER JOIN student s ON dp.student_id = s.id
+            WHERE s.school_id = :schoolId
+            ORDER BY dp.student_id, DATE(dp.created_at), dp.created_at DESC
+        ) as latest
+        GROUP BY DATE(latest.created_at), latest.risk_level
+        ORDER BY prediction_date DESC
+        """, nativeQuery = true)
+    List<Object[]> findRiskLevelTrendsBySchool(@Param("schoolId") UUID schoolId);
 }
