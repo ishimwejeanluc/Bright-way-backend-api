@@ -16,5 +16,5 @@ public interface IReportService {
     // Government-level reports
     Object getGovernmentReport(EReportType reportType);
     GovernmentOverallReportDTO getGovernmentOverallReport();
-    GovernmentReportResponseDTO getGovernmentDetailedReport(EReportType reportType);
+    Object getGovernmentDetailedReport(EReportType reportType);
 }

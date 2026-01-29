@@ -66,28 +66,180 @@ public class ReportServiceImpl implements IReportService {
 
     @Override
     @Transactional(readOnly = true)
-    public GovernmentReportResponseDTO getGovernmentDetailedReport(EReportType reportType) {
+    public Object getGovernmentDetailedReport(EReportType reportType) {
         List<School> schools = schoolRepository.findAll();
-        List<SchoolOverallReportDTO> schoolReports = new ArrayList<>();
         int totalStudents = 0;
-        double totalAttendance = 0.0;
-        double totalGrade = 0.0;
-        int totalAtRisk = 0;
         int schoolCount = schools.size();
-        for (School school : schools) {
-            SchoolOverallReportDTO report = getSchoolOverallReport(school.getId());
-            schoolReports.add(report);
-            totalStudents += report.getTotalStudents();
-            totalAttendance += report.getAverageAttendance();
-            totalGrade += report.getAverageGrade();
-            if (report.getRiskDistribution() != null) {
-                totalAtRisk += report.getRiskDistribution().getHighRiskCount();
-                totalAtRisk += report.getRiskDistribution().getCriticalRiskCount();
+        if (reportType == EReportType.ATTENDANCE) {
+            double totalAttendance = 0.0;
+            List<SchoolAttendanceReportDTO> schoolReports = new ArrayList<>();
+            for (School school : schools) {
+                SchoolOverallReportDTO report = getSchoolOverallReport(school.getId());
+                // Per-student average attendance for this school
+                List<Object[]> studentRows = reportRepository.getSchoolAttendanceReport(school.getId());
+                Map<UUID, List<String>> studentAttendanceMap = new LinkedHashMap<>();
+                Map<UUID, String> studentNameMap = new LinkedHashMap<>();
+                for (Object[] row : studentRows) {
+                    UUID studentId = (UUID) row[2];
+                    String studentName = (String) row[3];
+                    String status = (String) row[5];
+                    studentNameMap.put(studentId, studentName);
+                    studentAttendanceMap.computeIfAbsent(studentId, k -> new ArrayList<>()).add(status);
+                }
+                List<StudentAttendanceSummaryDTO> studentSummaries = new ArrayList<>();
+                for (Map.Entry<UUID, List<String>> entry : studentAttendanceMap.entrySet()) {
+                    UUID studentId = entry.getKey();
+                    String studentName = studentNameMap.get(studentId);
+                    List<String> statuses = entry.getValue();
+                    long presentCount = statuses.stream().filter(s -> "PRESENT".equals(s)).count();
+                    int totalDays = statuses.size();
+                    Double avgAttendance = totalDays > 0 ? Math.round((presentCount * 100.0 / totalDays) * 100.0) / 100.0 : 0.0;
+                    studentSummaries.add(new StudentAttendanceSummaryDTO(studentId, studentName, avgAttendance));
+                }
+                // Remove grade-related fields from courseSummaries for attendance report
+                List<CourseSummaryDTO> attendanceCourseSummaries = new ArrayList<>();
+                if (report.getCourseSummaries() != null) {
+                    for (CourseSummaryDTO cs : report.getCourseSummaries()) {
+                        CourseSummaryDTO attendanceSummary = new CourseSummaryDTO();
+                        attendanceSummary.setCourseId(cs.getCourseId());
+                        attendanceSummary.setCourseName(cs.getCourseName());
+                        attendanceSummary.setTeacherName(cs.getTeacherName());
+                        attendanceSummary.setStudentCount(cs.getStudentCount());
+                        attendanceSummary.setAttendanceRate(cs.getAttendanceRate());
+                        attendanceSummary.setAtRiskCount(cs.getAtRiskCount());
+                        attendanceCourseSummaries.add(attendanceSummary);
+                    }
+                }
+                SchoolAttendanceReportDTO attendanceReport = new SchoolAttendanceReportDTO(
+                    report.getSchoolId(),
+                    report.getSchoolName(),
+                    report.getTotalStudents(),
+                    report.getTotalCourses(),
+                    report.getTotalTeachers(),
+                    report.getTotalBehaviorIncidents(),
+                    report.getAverageAttendance(),
+                    report.getHighestAttendance(),
+                    report.getLowestAttendance(),
+                    attendanceCourseSummaries,
+                    studentSummaries
+                );
+                schoolReports.add(attendanceReport);
+                totalStudents += report.getTotalStudents();
+                if (report.getAverageAttendance() != null) {
+                    totalAttendance += report.getAverageAttendance();
+                }
             }
-        }
-        double avgAttendance = schoolCount > 0 ? totalAttendance / schoolCount : 0.0;
-        double avgGrade = schoolCount > 0 ? totalGrade / schoolCount : 0.0;
-        return new GovernmentReportResponseDTO(
+            double avgAttendance = schoolCount > 0 ? totalAttendance / schoolCount : 0.0;
+            return new GovernmentAttendanceReportDTO(
+                reportType.name(),
+                schoolCount,
+                totalStudents,
+                avgAttendance,
+                schoolReports
+            );
+        } else if (reportType == EReportType.GRADES) {
+            double totalGrade = 0.0;
+            List<SchoolGradesReportDTO> schoolReports = new ArrayList<>();
+            for (School school : schools) {
+                SchoolOverallReportDTO report = getSchoolOverallReport(school.getId());
+                // Aggregate all grades per student for this school
+                List<Object[]> gradeRows = reportRepository.getSchoolGradesReport(school.getId());
+                Map<UUID, List<Double>> studentGradesMap = new LinkedHashMap<>();
+                Map<UUID, String> studentNameMap = new LinkedHashMap<>();
+                for (Object[] row : gradeRows) {
+                    UUID studentId = row[2] instanceof UUID ? (UUID) row[2] : null;
+                    String studentName = row[3] instanceof String ? (String) row[3] : null;
+                    Double grade = row[11] instanceof Number ? ((Number) row[11]).doubleValue() : null; // overallAverage
+                    if (studentId != null && studentName != null && grade != null) {
+                        studentNameMap.put(studentId, studentName);
+                        studentGradesMap.computeIfAbsent(studentId, k -> new ArrayList<>()).add(grade);
+                    }
+                }
+                // Get all students in the school (from attendance, to include those with no grades)
+                List<Object[]> allStudentsRows = reportRepository.getSchoolAttendanceReport(school.getId());
+                Set<UUID> allStudentIds = new HashSet<>();
+                Map<UUID, String> allStudentNames = new HashMap<>();
+                for (Object[] row : allStudentsRows) {
+                    UUID studentId = row[2] instanceof UUID ? (UUID) row[2] : null;
+                    String studentName = row[3] instanceof String ? (String) row[3] : null;
+                    if (studentId != null && studentName != null) {
+                        allStudentIds.add(studentId);
+                        allStudentNames.put(studentId, studentName);
+                    }
+                }
+                List<StudentGradeSummaryDTO> studentSummaries = new ArrayList<>();
+                for (UUID studentId : allStudentIds) {
+                    String studentName = allStudentNames.get(studentId);
+                    List<Double> grades = studentGradesMap.get(studentId);
+                    Double avgGrade = 0.0;
+                    if (grades != null && !grades.isEmpty()) {
+                        avgGrade = Math.round(grades.stream().mapToDouble(Double::doubleValue).average().orElse(0.0) * 100.0) / 100.0;
+                    }
+                    studentSummaries.add(new StudentGradeSummaryDTO(studentId, studentName, avgGrade));
+                }
+                // Remove attendanceRate from courseSummaries for grades report
+                List<CourseSummaryDTO> gradeCourseSummaries = new ArrayList<>();
+                if (report.getCourseSummaries() != null) {
+                    for (CourseSummaryDTO cs : report.getCourseSummaries()) {
+                        CourseSummaryDTO gradeSummary = new CourseSummaryDTO();
+                        gradeSummary.setCourseId(cs.getCourseId());
+                        gradeSummary.setCourseName(cs.getCourseName());
+                        gradeSummary.setTeacherName(cs.getTeacherName());
+                        gradeSummary.setStudentCount(cs.getStudentCount());
+                        gradeSummary.setAverageGrade(cs.getAverageGrade());
+                        gradeSummary.setAtRiskCount(cs.getAtRiskCount());
+                        gradeCourseSummaries.add(gradeSummary);
+                    }
+                }
+                SchoolGradesReportDTO gradesReport = new SchoolGradesReportDTO(
+                    report.getSchoolId(),
+                    report.getSchoolName(),
+                    report.getTotalStudents(),
+                    report.getTotalCourses(),
+                    report.getTotalTeachers(),
+                    report.getTotalBehaviorIncidents(),
+                    report.getAverageGrade(),
+                    report.getHighestGrade(),
+                    report.getLowestGrade(),
+                    report.getTopPerformers(),
+                    report.getBottomPerformers(),
+                    gradeCourseSummaries,
+                    studentSummaries
+                );
+                schoolReports.add(gradesReport);
+                totalStudents += report.getTotalStudents();
+                if (report.getAverageGrade() != null) {
+                    totalGrade += report.getAverageGrade();
+                }
+            }
+            double avgGrade = schoolCount > 0 ? totalGrade / schoolCount : 0.0;
+            return new GovernmentGradesReportDTO(
+                reportType.name(),
+                schoolCount,
+                totalStudents,
+                avgGrade,
+                schoolReports
+            );
+        } else {
+            // Default fallback to original logic
+            List<SchoolOverallReportDTO> schoolReports = new ArrayList<>();
+            double totalAttendance = 0.0;
+            double totalGrade = 0.0;
+            int totalAtRisk = 0;
+            for (School school : schools) {
+                SchoolOverallReportDTO report = getSchoolOverallReport(school.getId());
+                schoolReports.add(report);
+                totalStudents += report.getTotalStudents();
+                totalAttendance += report.getAverageAttendance();
+                totalGrade += report.getAverageGrade();
+                if (report.getRiskDistribution() != null) {
+                    totalAtRisk += report.getRiskDistribution().getHighRiskCount();
+                    totalAtRisk += report.getRiskDistribution().getCriticalRiskCount();
+                }
+            }
+            double avgAttendance = schoolCount > 0 ? totalAttendance / schoolCount : 0.0;
+            double avgGrade = schoolCount > 0 ? totalGrade / schoolCount : 0.0;
+            return new GovernmentReportResponseDTO(
                 reportType.name(),
                 schoolCount,
                 totalStudents,
@@ -95,7 +247,8 @@ public class ReportServiceImpl implements IReportService {
                 avgGrade,
                 totalAtRisk,
                 schoolReports
-        );
+            );
+        }
     }
     @Override
     @Transactional(readOnly = true)

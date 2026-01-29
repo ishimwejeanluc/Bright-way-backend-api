@@ -55,16 +55,7 @@ public class ReportController {
         );
     }
 
-    /**
-     * Get government-level report for all schools
-     * Supports three report types:
-     * - OVERALL (default): All-schools summary
-     * - ATTENDANCE: Per-school attendance
-     * - GRADES: Per-school grades
-     *
-     * @param type The type of report (OVERALL, ATTENDANCE, or GRADES)
-     * @return Government report based on type
-     */
+    
     @GetMapping("/government")
     @PreAuthorize("hasRole('GOVERNMENT')")
     public ResponseEntity<ApiResponse> getGovernmentReport(

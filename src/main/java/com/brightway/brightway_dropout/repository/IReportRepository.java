@@ -1,5 +1,8 @@
 package com.brightway.brightway_dropout.repository;
 
+    
+
+
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
@@ -11,9 +14,6 @@ import java.util.UUID;
 @Repository
 public interface IReportRepository extends JpaRepository<com.brightway.brightway_dropout.model.School, UUID> {
     
-    // ==================== SCHOOL-WIDE OVERALL STATISTICS ====================
-    
-    // Get school-wide basic statistics
     @Query(value = """
         SELECT 
             COUNT(DISTINCT s.id) as total_students,
