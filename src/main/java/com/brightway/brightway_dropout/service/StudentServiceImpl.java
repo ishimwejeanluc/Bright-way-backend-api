@@ -314,21 +314,48 @@ public class StudentServiceImpl implements IStudentService {
         List<WeekAttendanceDTO> trends = new ArrayList<>();
         List<Attendance> records = student.getAttendanceRecords();
         if (records == null || records.isEmpty()) return trends;
-        // Group by week (Monday-Sunday)
-        Map<Integer, List<Attendance>> weekMap = new HashMap<>();
-        for (Attendance a : records) {
-            if (a.getDate() != null) {
-                int weekOfYear = a.getDate().get(java.time.temporal.IsoFields.WEEK_OF_WEEK_BASED_YEAR);
-                weekMap.computeIfAbsent(weekOfYear, k -> new ArrayList<>()).add(a);
-            }
-        }
-        for (Map.Entry<Integer, List<Attendance>> entry : weekMap.entrySet()) {
-            List<Attendance> weekRecords = entry.getValue();
-            long present = weekRecords.stream().filter(a -> a.getStatus() == EAttendanceStatus.PRESENT).count();
-            double weeklyAverage = weekRecords.isEmpty() ? 0.0 : (present * 100.0) / weekRecords.size();
-            trends.add(new WeekAttendanceDTO("Week " + entry.getKey(), weeklyAverage));
-        }
-        return trends;
+        
+        // Filter to last 8 weeks (2 months) only
+        LocalDate endDate = LocalDate.now();
+        LocalDate startDate = endDate.minusWeeks(8);
+        
+        List<Attendance> recentRecords = records.stream()
+            .filter(a -> a.getDate() != null && 
+                        !a.getDate().isBefore(startDate) && 
+                        !a.getDate().isAfter(endDate))
+            .collect(Collectors.toList());
+        
+        if (recentRecords.isEmpty()) return trends;
+        
+        // Group by week with year context for proper chronological ordering
+        Map<String, List<Attendance>> weekMap = recentRecords.stream()
+            .collect(Collectors.groupingBy(a -> {
+                LocalDate date = a.getDate();
+                int year = date.get(java.time.temporal.IsoFields.WEEK_BASED_YEAR);
+                int week = date.get(java.time.temporal.IsoFields.WEEK_OF_WEEK_BASED_YEAR);
+                return String.format("%04d-W%02d", year, week); // e.g., "2024-W44"
+            }));
+        
+        // Sort chronologically and calculate weekly averages
+        return weekMap.entrySet().stream()
+            .sorted(Map.Entry.comparingByKey()) // Ensures chronological order
+            .map(entry -> {
+                String weekKey = entry.getKey();
+                List<Attendance> weekRecords = entry.getValue();
+                
+                // Extract week number for display label
+                String weekNumber = weekKey.substring(weekKey.indexOf("W") + 1);
+                
+                // Calculate attendance percentage for this week
+                long present = weekRecords.stream()
+                    .filter(a -> a.getStatus() == EAttendanceStatus.PRESENT)
+                    .count();
+                
+                double weeklyAverage = weekRecords.isEmpty() ? 0.0 : (present * 100.0) / weekRecords.size();
+                
+                return new WeekAttendanceDTO("Week " + weekNumber, weeklyAverage);
+            })
+            .collect(Collectors.toList());
     }
 
     private List<ChildBehaviorDTO> getBehaviorDetails(Student student) {
