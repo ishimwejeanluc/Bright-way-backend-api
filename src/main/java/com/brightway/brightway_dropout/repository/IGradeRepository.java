@@ -103,6 +103,17 @@ public interface IGradeRepository extends JpaRepository<Grade, UUID> {
         """, nativeQuery = true)
     List<Object[]> findPerformanceTrendByGradeTypeForStudent(@Param("studentId") UUID studentId);
 
+    // Performance trend by grade type for a specific student (SUM instead of AVG)
+    @Query(value = """
+        SELECT g.grade_type, ROUND(SUM(g.marks)::numeric, 2)
+        FROM grade g
+        JOIN enrollment e ON g.enrollment_id = e.id
+        WHERE e.student_id = :studentId
+        GROUP BY g.grade_type
+        ORDER BY g.grade_type
+        """, nativeQuery = true)
+    List<Object[]> findPerformanceTrendSumByGradeTypeForStudent(@Param("studentId") UUID studentId);
+
     // Fetch all Grade entities for a student (for ML features)
     @Query("SELECT g FROM Grade g JOIN g.enrollment e WHERE e.student.id = :studentId")
     List<Grade> findAllByStudentId(@Param("studentId") UUID studentId);

@@ -290,6 +290,7 @@ public class StudentServiceImpl implements IStudentService {
             int behaviorIncidents = child.getBehaviorIncidents() != null ? child.getBehaviorIncidents().size() : 0;
             List<WeekAttendanceDTO> attendanceTrends = getAttendanceTrends(child);
             List<ChildBehaviorDTO> behaviorDetails = getBehaviorDetails(child);
+            List<StudentPerformanceTrendDTO> performanceTrend = getPerformanceTrendForChild(child.getId());
             childSummaries.add(new ParentChildSummaryDTO(
                 name,
                 overallAttendance,
@@ -297,7 +298,8 @@ public class StudentServiceImpl implements IStudentService {
                 todayAttendance,
                 behaviorIncidents,
                 attendanceTrends,
-                behaviorDetails
+                behaviorDetails,
+                performanceTrend
             ));
         }
         return new ParentDashboardDTO(children.size(), childSummaries);
@@ -367,5 +369,19 @@ public class StudentServiceImpl implements IStudentService {
             }
         }
         return details;
+    }
+
+    private List<StudentPerformanceTrendDTO> getPerformanceTrendForChild(UUID studentId) {
+        // Get average marks by grade type (same as student dashboard)
+        List<Object[]> trendRows = gradeRepository.findPerformanceTrendByGradeTypeForStudent(studentId);
+        List<StudentPerformanceTrendDTO> performanceTrend = new ArrayList<>();
+        if (trendRows != null) {
+            for (Object[] row : trendRows) {
+                String gradeType = row[0] != null ? row[0].toString() : "";
+                double averageMarks = row[1] != null ? Double.parseDouble(row[1].toString()) : 0.0;
+                performanceTrend.add(new StudentPerformanceTrendDTO(gradeType, averageMarks));
+            }
+        }
+        return performanceTrend;
     }
 }

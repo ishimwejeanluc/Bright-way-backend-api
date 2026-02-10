@@ -4,6 +4,7 @@ import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 import java.util.List;
+import com.brightway.brightway_dropout.dto.grade.response.StudentPerformanceTrendDTO;
 
 @Data
 @NoArgsConstructor
@@ -16,4 +17,5 @@ public class ParentChildSummaryDTO {
     private int behaviorIncidents;
     private List<WeekAttendanceDTO> attendanceTrends;
     private List<ChildBehaviorDTO> behaviorDetails;
+    private List<StudentPerformanceTrendDTO> performanceTrend;
 }
