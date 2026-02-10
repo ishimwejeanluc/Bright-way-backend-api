@@ -7,6 +7,7 @@ import com.brightway.brightway_dropout.enumeration.EAttendanceStatus;
 import com.brightway.brightway_dropout.exception.ResourceAlreadyExistsException;
 import com.brightway.brightway_dropout.exception.ResourceNotFoundException;
 import com.brightway.brightway_dropout.model.Attendance;
+import com.brightway.brightway_dropout.model.BehaviorIncident;
 import com.brightway.brightway_dropout.model.Enrollment;
 import com.brightway.brightway_dropout.model.Student;
 import com.brightway.brightway_dropout.repository.IAttendanceRepository;
@@ -18,6 +19,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
+import java.util.ArrayList;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -38,6 +40,9 @@ public class AttendanceServiceImpl implements IAttendanceService {
     @Override
     @Transactional(readOnly = true)
     public StAttendanceOverviewDTO getStudentAttendanceOverview(UUID studentId) {
+        Student student = studentRepository.findById(studentId)
+            .orElseThrow(() -> new ResourceNotFoundException("Student not found"));
+            
         // Overall attendance percentage
         Double overallAttendance = attendanceRepository.findAttendanceRateForStudent(studentId);
         if (overallAttendance == null) overallAttendance = 0.0;
@@ -74,13 +79,39 @@ public class AttendanceServiceImpl implements IAttendanceService {
             mostMissedClassName = row[0] != null ? row[0].toString() : null;
             mostMissedClassTotal = row[1] != null ? Integer.parseInt(row[1].toString()) : 0;
         }
+        
+        // Daily attendance overview - same format as student dashboard
+        List<Object[]> attendanceRows = attendanceRepository.findAttendanceOverviewByDayForStudent(studentId);
+        List<com.brightway.brightway_dropout.dto.attendance.response.AttendanceStudentOverviewDTO> attendanceOverview = new ArrayList<>();
+        if (attendanceRows != null) {
+            for (Object[] row : attendanceRows) {
+                String day = row[0] != null ? row[0].toString() : "";
+                double percent = row[1] != null ? Double.parseDouble(row[1].toString()) : 0.0;
+                attendanceOverview.add(new com.brightway.brightway_dropout.dto.attendance.response.AttendanceStudentOverviewDTO(day, percent));
+            }
+        }
+        
+        // All behavior incidents for the student
+        List<com.brightway.brightway_dropout.dto.behaviorIncident.response.StBehaviorIncidentDTO> behaviorIncidents = new ArrayList<>();
+        List<BehaviorIncident> incidents = student.getBehaviorIncidents();
+        if (incidents != null) {
+            for (BehaviorIncident incident : incidents) {
+                behaviorIncidents.add(new com.brightway.brightway_dropout.dto.behaviorIncident.response.StBehaviorIncidentDTO(
+                    incident.getNotes(),
+                    incident.getType() != null ? incident.getType().name() : null,
+                    incident.getSeverity() != null ? incident.getSeverity().name() : null
+                ));
+            }
+        }
 
         return new com.brightway.brightway_dropout.dto.student.response.StAttendanceOverviewDTO(
             overallAttendance,
             weeklyAttendance,
             courseAttendance,
             mostMissedClassName,
-            mostMissedClassTotal
+            mostMissedClassTotal,
+            attendanceOverview,
+            behaviorIncidents
         );
     }
     
