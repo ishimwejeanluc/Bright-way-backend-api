@@ -17,4 +17,5 @@ public class TeacherAttendanceStatsDTO {
     private double overallAttendancePercentage;
     private List<CourseWeeklyAttendanceTrendDTO> weeklyTrends;
     private List<StudentDetailDTO> students;
+    private ChronicAbsenceDTO chronicAbsence;
 }

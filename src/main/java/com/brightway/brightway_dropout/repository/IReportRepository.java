@@ -62,7 +62,7 @@ public interface IReportRepository extends JpaRepository<com.brightway.brightway
                 risk_level,
                 probability
             FROM dropout_predictions
-            ORDER BY student_id, created_at DESC
+            ORDER BY student_id, predicted_at DESC
         )
         SELECT 
             COUNT(CASE WHEN lp.risk_level = 'LOW' THEN 1 END) as low_risk_count,
@@ -71,7 +71,7 @@ public interface IReportRepository extends JpaRepository<com.brightway.brightway
             COUNT(CASE WHEN lp.risk_level = 'CRITICAL' THEN 1 END) as critical_risk_count,
             ROUND(CAST(AVG(lp.probability) AS numeric), 2) as avg_dropout_probability
         FROM student s
-        LEFT JOIN latest_predictions lp ON s.id = lp.student_id
+        JOIN latest_predictions lp ON s.id = lp.student_id
         WHERE s.school_id = :schoolId
         """, nativeQuery = true)
     List<Object[]> getSchoolRiskDistribution(@Param("schoolId") UUID schoolId);

@@ -549,13 +549,40 @@ public class TeacherServiceImpl implements ITeacherService {
         }
         
         double overallAttendancePercentage = allAttendanceRecords > 0 ? (presentCount * 100.0) / allAttendanceRecords : 0.0;
+        
+        // Calculate chronic absence data
+        ChronicAbsenceDTO chronicAbsence = calculateChronicAbsence(teacherId);
+        
         return new TeacherAttendanceStatsDTO(
             totalPresentToday,
             totalAbsentToday,
             overallAttendancePercentage,
             weeklyTrends,
-            studentsList
+            studentsList,
+            chronicAbsence
         );
+    }
+    
+    private ChronicAbsenceDTO calculateChronicAbsence(UUID teacherId) {
+        // Get students with most consecutive absences (top 2)
+        List<Object[]> consecutiveResults = attendanceRepository.findStudentsWithMostConsecutiveAbsences(teacherId, 2);
+        List<StudentAbsenceDTO> mostConsecutive = consecutiveResults.stream()
+            .map(row -> new StudentAbsenceDTO(
+                (String) row[0],  // student name
+                ((Number) row[1]).intValue()  // consecutive count
+            ))
+            .collect(Collectors.toList());
+        
+        // Get students with most total absences (top 2)
+        List<Object[]> totalResults = attendanceRepository.findStudentsWithMostTotalAbsences(teacherId, 2);
+        List<StudentAbsenceDTO> mostTotal = totalResults.stream()
+            .map(row -> new StudentAbsenceDTO(
+                (String) row[0],  // student name
+                ((Number) row[1]).intValue()  // total count
+            ))
+            .collect(Collectors.toList());
+        
+        return new ChronicAbsenceDTO(mostConsecutive, mostTotal);
     }
     
     @Override

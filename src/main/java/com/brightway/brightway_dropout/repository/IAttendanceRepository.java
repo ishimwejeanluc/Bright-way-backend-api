@@ -176,4 +176,56 @@ public interface IAttendanceRepository extends JpaRepository<Attendance, UUID> {
     List<Object[]> findWeeklyAttendanceByTeacher(@Param("teacherId") UUID teacherId, 
                                                    @Param("startDate") LocalDate startDate, 
                                                    @Param("endDate") LocalDate endDate);
+
+    // Method to find students with most total absences for a teacher
+    @Query(value = """
+        SELECT u.name, COUNT(a.id) as totalAbsences
+        FROM attendance a
+        INNER JOIN student s ON a.student_id = s.id
+        INNER JOIN users u ON s.user_id = u.id
+        INNER JOIN enrollment e ON s.id = e.student_id
+        INNER JOIN course c ON e.course_id = c.id
+        WHERE c.teacher_id = :teacherId
+        AND a.status = 'ABSENT'
+        GROUP BY s.id, u.name
+        ORDER BY totalAbsences DESC
+        LIMIT :limit
+        """, nativeQuery = true)
+    List<Object[]> findStudentsWithMostTotalAbsences(@Param("teacherId") UUID teacherId, @Param("limit") int limit);
+
+    // Method to find students with most consecutive absences for a teacher
+    @Query(value = """
+        WITH consecutive_absences AS (
+            SELECT 
+                s.id as student_id,
+                u.name as student_name,
+                a.date,
+                a.status,
+                ROW_NUMBER() OVER (PARTITION BY s.id ORDER BY a.date) - 
+                ROW_NUMBER() OVER (PARTITION BY s.id, a.status ORDER BY a.date) as grp
+            FROM attendance a
+            INNER JOIN student s ON a.student_id = s.id
+            INNER JOIN users u ON s.user_id = u.id
+            INNER JOIN enrollment e ON s.id = e.student_id
+            INNER JOIN course c ON e.course_id = c.id
+            WHERE c.teacher_id = :teacherId
+            AND a.status = 'ABSENT'
+        ),
+        consecutive_counts AS (
+            SELECT 
+                student_id,
+                student_name,
+                COUNT(*) as consecutive_absences
+            FROM consecutive_absences
+            GROUP BY student_id, student_name, grp
+        )
+        SELECT 
+            student_name,
+            MAX(consecutive_absences) as max_consecutive
+        FROM consecutive_counts
+        GROUP BY student_id, student_name
+        ORDER BY max_consecutive DESC
+        LIMIT :limit
+        """, nativeQuery = true)
+    List<Object[]> findStudentsWithMostConsecutiveAbsences(@Param("teacherId") UUID teacherId, @Param("limit") int limit);
 }

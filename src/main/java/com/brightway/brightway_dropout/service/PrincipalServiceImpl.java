@@ -65,11 +65,15 @@ public class PrincipalServiceImpl implements IPrincipalService {
         LocalDate today = LocalDate.now();
             int todayAttendance = 0;
             Object[] kpis = attendanceRepository.findAttendanceKPIs(today, schoolId);
-            if (kpis != null && kpis.length >= 2) {
-                Number present = (Number) kpis[0];
-                Number absent = (Number) kpis[1];
-                int total = present.intValue() + absent.intValue();
-                todayAttendance = total > 0 ? (int) Math.round((present.doubleValue() * 100.0) / total) : 0;
+            if (kpis != null && kpis.length > 0) {
+                Object[] attendanceData = (Object[]) kpis[0]; // Get the nested array
+                if (attendanceData != null && attendanceData.length >= 2) {
+                    Number present = (Number) attendanceData[0];  
+                    Number absent = (Number) attendanceData[1];   
+                    int total = present.intValue() + absent.intValue(); 
+                    todayAttendance = total > 0 ? (int) Math.round((present.doubleValue() * 100.0) / total) : 0;
+                    
+                }
             }
 
         // Risk level trends: get latest prediction per student per date, then count by risk level
